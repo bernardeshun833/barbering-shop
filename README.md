@@ -93,9 +93,13 @@ fills with HIGH flags for money that did in fact arrive.
 
 `docs/testing.md` is a runbook for verifying the whole system with nothing but
 a laptop, a phone and GitHub — no Docker and no Supabase CLI. Migrations go in
-through the dashboard SQL editor, the PWA deploys to GitHub Pages so it can be
-installed on a real phone, and the nightly job is deployed and triggered from
-the Actions tab.
+through the dashboard SQL editor, the PWA deploys to Cloudflare (see
+`wrangler.toml`) or GitHub Pages so it can be installed on a real phone, and
+the nightly job is deployed and triggered from the Actions tab.
+
+The Supabase URL and anon key are baked in at build time, so they must be set
+as build environment variables on whichever host you use — miss them and the
+build succeeds but the app shows a blank screen.
 
 ## Running it locally
 

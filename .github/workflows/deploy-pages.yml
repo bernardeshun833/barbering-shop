@@ -1,12 +1,13 @@
 name: Deploy tablet app
 
-# Publishes the PWA to GitHub Pages so it can be installed and tested on a
-# real phone or tablet without any local tooling. Run it from the Actions tab
-# (the "Run workflow" button works fine from a phone).
+# Publishes the PWA to GitHub Pages, as an alternative to the Cloudflare
+# deploy (see wrangler.toml), which is the primary one.
+#
+# Manual only: with Cloudflare serving the app, running this on every push to
+# main would just fail for anyone who has not set up Pages, and a permanently
+# red tick trains you to ignore the ticks that matter.
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

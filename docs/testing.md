@@ -60,7 +60,57 @@ update shop_settings set owner_email = 'you@example.com';
 
 ---
 
-## 3. Put it on your phone — GitHub Actions
+## 3. Put it on your phone — Cloudflare, on your own domain
+
+Cloudflare builds straight from GitHub, so this needs no local tooling either.
+In **Workers & Pages → Create → Import a repository**, pick
+`bernardeshun833/barbering-shop` and use:
+
+| Field | Value |
+| --- | --- |
+| Build command | `npm run build` |
+| Deploy command | `npx wrangler deploy` |
+
+`wrangler.toml` in the repo does the rest: it serves `./dist` as static assets
+and routes unknown paths back to the app, so `/today` and `/cash-count` survive
+a refresh.
+
+**The one thing that will bite you:** the Supabase URL and key are baked in at
+build time, so they must be set as **build environment variables** in
+Cloudflare — Settings → Variables and Secrets — before the first deploy:
+
+```
+VITE_SUPABASE_URL         https://<ref>.supabase.co
+VITE_SUPABASE_ANON_KEY    <anon key>
+VITE_DEVICE_EMAIL         device@yourshop.example
+VITE_DEVICE_PASSWORD      <the device account password>
+```
+
+Miss those and the build still succeeds — you just get a blank screen on the
+phone, because the app throws on startup with nothing to connect to.
+
+Only the `anon` key belongs here. It is meant to be public, and the database's
+row-level security is what limits it to inserting sales and cash counts. The
+`service_role` key must never go in a build variable: it bypasses every rule
+and would be sitting in the JavaScript any customer could read.
+
+### Your own domain
+
+Once deployed: **your Worker → Settings → Domains & Routes → Add → Custom
+domain**, and enter the hostname you want (`pos.yourdomain.com`). The domain
+has to be on Cloudflare DNS; the certificate is issued automatically.
+
+Use a real hostname rather than the `workers.dev` URL before installing it on
+the tablet — a PWA's stored data is tied to its origin, so moving it later
+means the tablet starts again with an empty local queue.
+
+Then open it on the phone and **Add to Home Screen**. Aeroplane mode, log
+sales, turn it back on, watch the queue drain.
+
+## 3b. Or GitHub Pages — GitHub Actions
+
+Not needed if you deployed to Cloudflare above — this is the alternative host.
+The function secrets below are needed either way, for part 4.
 
 Add these under **Settings → Secrets and variables → Actions**:
 
@@ -73,8 +123,8 @@ Add these under **Settings → Secrets and variables → Actions**:
 | `SUPABASE_ACCESS_TOKEN` | Account → Access Tokens |
 
 Then **Settings → Pages → Source: GitHub Actions**, and run
-**Actions → Deploy tablet app**. It publishes to
-`https://<your-username>.github.io/barbering-shop/`.
+**Actions → Deploy tablet app** (manual only — Cloudflare is the primary
+deploy). It publishes to `https://<your-username>.github.io/barbering-shop/`.
 
 Open that on the phone and use **Add to Home Screen**. It installs as a proper
 app: full screen, works offline, survives being closed. Put the phone in
