@@ -468,6 +468,51 @@ export function reconcile(input: ReconciliationInput): BusinessDateReport {
 }
 
 /**
+ * Business dates whose stored report no longer matches the data behind it.
+ *
+ * The nightly job runs at 21:30 for the day that just closed. A tablet that is
+ * offline past that point — the exact case offline-first exists for — pushes
+ * its rows the next morning, carrying yesterday's `created_at_local`. Without
+ * this, yesterday's report is written once and never revisited: it permanently
+ * understates the day, and because stored reports are what the rolling medians
+ * learn from, the wrong number quietly becomes the baseline.
+ *
+ * A date needs re-running when either:
+ *   * a transaction for that date reached the server after the report for it
+ *     was written (late sync), or
+ *   * the date has transactions but no report at all (a night the cron missed).
+ *
+ * Returned oldest first: re-running in order means each day's baseline is
+ * rebuilt from already-corrected history rather than from the stale numbers.
+ */
+export function datesNeedingRevision(
+  reports: { business_date: string; created_at: string }[],
+  transactions: { created_at_local: string; synced_at: string }[]
+): string[] {
+  const reportWrittenAt = new Map(
+    reports.map((r) => [r.business_date, Date.parse(r.created_at)])
+  );
+
+  const stale = new Set<string>();
+
+  for (const txn of transactions) {
+    const date = txn.created_at_local.slice(0, 10);
+    const writtenAt = reportWrittenAt.get(date);
+
+    if (writtenAt === undefined) {
+      stale.add(date);
+      continue;
+    }
+
+    if (Date.parse(txn.synced_at) > writtenAt) {
+      stale.add(date);
+    }
+  }
+
+  return [...stale].sort();
+}
+
+/**
  * Longest stretch during opening hours in which a device sent nothing.
  *
  * Every sync leaves a trace — a `synced_at` on the rows it pushed, or a

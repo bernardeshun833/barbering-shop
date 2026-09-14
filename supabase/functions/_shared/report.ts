@@ -16,6 +16,13 @@ const SEVERITY_COLOR: Record<Severity, string> = {
 
 const ghs = (n: number) => `GHS ${n.toFixed(2)}`;
 
+/** An earlier day whose figures changed after its data arrived late. */
+export interface Revision {
+  business_date: string;
+  previous: { revenue_total: number; txn_count: number; severity: Severity } | null;
+  current: { revenue_total: number; txn_count: number; severity: Severity };
+}
+
 /**
  * Reports stored before cash-only mode existed have no momo_checked field, and
  * they were all produced with Check A running. Treating `undefined` as true
@@ -40,7 +47,8 @@ export function emailSubject(report: BusinessDateReport): string {
  */
 export function emailHtml(
   report: BusinessDateReport,
-  barberNames: Record<string, string>
+  barberNames: Record<string, string>,
+  revisions: Revision[] = []
 ): string {
   const flagRows =
     report.flags.length === 0
@@ -131,6 +139,8 @@ export function emailHtml(
           : ""
       }
 
+      ${revisionSection(revisions)}
+
       ${
         !report.baseline_available
           ? `<p style="margin:20px 0 0;color:#64748b;font-size:13px">Volume checks are still building their baseline — they need a few weeks of history before they mean anything.</p>`
@@ -143,6 +153,59 @@ export function emailHtml(
       </p>
     </div>
   </div>`;
+}
+
+/**
+ * Earlier days that have been recalculated because their sales arrived late.
+ *
+ * Correcting the record silently would be its own problem: the owner was told
+ * a number, and the history now says something else. This says so plainly,
+ * inside the same daily email rather than as a second one — a corrected
+ * Tuesday is not urgent enough to be worth its own alert.
+ */
+function revisionSection(revisions: Revision[]): string {
+  if (revisions.length === 0) return "";
+
+  const rows = revisions
+    .map((r) => {
+      const was =
+        r.previous === null
+          ? "not reported at the time"
+          : `${ghs(r.previous.revenue_total)} · ${r.previous.txn_count} cuts`;
+      const escalated =
+        r.current.severity === "MEDIUM" || r.current.severity === "HIGH"
+          ? ` <span style="color:${SEVERITY_COLOR[r.current.severity]}">(${
+              SEVERITY_LABEL[r.current.severity]
+            })</span>`
+          : "";
+
+      return `
+      <tr>
+        <td style="padding:6px 0">${r.business_date}</td>
+        <td style="padding:6px 0;color:#64748b">${was}</td>
+        <td style="padding:6px 0;text-align:right">${ghs(r.current.revenue_total)} · ${
+          r.current.txn_count
+        } cuts${escalated}</td>
+      </tr>`;
+    })
+    .join("");
+
+  return `
+      <h3 style="margin:20px 0 8px">Revised earlier days</h3>
+      <p style="margin:0 0 8px;color:#475569;font-size:14px">
+        Sales from ${
+          revisions.length === 1 ? "this day" : "these days"
+        } reached the server late — the tablet was offline when the original
+        report was sent. These figures replace the ones you were given.
+      </p>
+      <table style="width:100%;border-collapse:collapse;font-size:15px">
+        <tr style="color:#64748b;font-size:13px;text-align:left">
+          <th style="padding:6px 0;font-weight:500">Day</th>
+          <th style="padding:6px 0;font-weight:500">Reported as</th>
+          <th style="padding:6px 0;font-weight:500;text-align:right">Actually</th>
+        </tr>
+        ${rows}
+      </table>`;
 }
 
 /** Short enough to read on a phone lock screen. */

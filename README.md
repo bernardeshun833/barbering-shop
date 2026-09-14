@@ -175,7 +175,26 @@ WhatsApp fires only at MEDIUM or above.
 Every report is stored, which is what builds the baseline the rolling medians
 depend on.
 
-Re-run a missed night by hand:
+### Late data revises the day it belongs to
+
+A tablet that is offline past 21:30 — the exact case offline-first exists for —
+pushes its sales the next morning, still carrying the previous day's
+`created_at_local`. So before reporting today, the job looks back 14 days for
+any date whose sales reached the server *after* that date's report was written,
+or that has sales and no report at all, and reconciles those days again, oldest
+first.
+
+Without this, a day reported while the tablet was offline stayed wrong forever
+— and because stored reports are the baseline, the wrong number would teach the
+volume checks the wrong normal.
+
+Corrections are not silent: when an earlier day's figures move, today's email
+carries a short "Revised earlier days" table showing what the owner was told
+against what the day actually was. It stays in the one daily email — a
+corrected Tuesday is not worth its own alert.
+
+A manual `?date=` run reconciles only that day and skips the look-back, so
+re-running one night by hand cannot quietly rewrite a fortnight of history:
 
 ```bash
 curl -X POST "https://<ref>.supabase.co/functions/v1/nightly-reconciliation?date=2026-03-12" \
