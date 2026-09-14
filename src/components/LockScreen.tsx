@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Backdrop from "./Backdrop";
 import Brand from "./Brand";
 import NumPad from "./NumPad";
 import { verifyPin } from "../lib/pin";
@@ -40,14 +41,14 @@ export default function LockScreen({
 
   return (
     <div className="relative flex flex-1 flex-col overflow-y-auto">
-      {/* Warm pool of light behind the lockup, so the top of the screen has
-          depth without needing a photograph that has to be licensed and
-          downloaded. Drop one in as public/backdrop.jpg and set it here if
-          the shop has its own. */}
+      {/* The shop's own photograph when public/backdrop.jpg exists; a warm
+          pool of light when it does not, so the screen never looks unfinished
+          while the image is still being produced. */}
+      <Backdrop src="backdrop.jpg" className="h-[26rem]" />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-72
-                   bg-[radial-gradient(120%_90%_at_50%_0%,rgba(200,155,82,0.22),transparent_70%)]"
+                   bg-[radial-gradient(120%_90%_at_50%_0%,rgba(200,155,82,0.18),transparent_70%)]"
       />
 
       <div className="relative mx-auto flex w-full max-w-sm flex-1 flex-col gap-6 px-4 py-8">

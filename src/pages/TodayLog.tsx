@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { PhotoPanel } from "../components/Backdrop";
 import NumPad from "../components/NumPad";
 import { db, queueTransaction, transactionsForLocalDate } from "../lib/db";
 import { getDeviceId } from "../lib/device";
@@ -95,6 +96,11 @@ export default function TodayLog() {
             );
           })}
       </ul>
+
+      {/* The shop's own image, when it exists. Sits below the day's entries so
+          it never pushes the numbers off the screen, and disappears entirely
+          when the file is not there. */}
+      <PhotoPanel src="today.jpg" />
 
       {voiding && (
         <VoidDialog

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
+import Backdrop from "./components/Backdrop";
 import Brand from "./components/Brand";
 import LockScreen from "./components/LockScreen";
 import SyncStatusBar from "./components/SyncStatusBar";
@@ -133,8 +134,11 @@ export default function App() {
       {DEMO_MODE && <DemoBanner />}
       <SyncStatusBar status={status} />
 
-      <header className="flex items-center justify-between px-4 pb-1 pt-3">
-        <Brand />
+      <header className="relative flex items-center justify-between overflow-hidden px-4 pb-2 pt-3">
+        <Backdrop src="header.jpg" scrim="from-ink-900/70 via-ink-900/80 to-ink-900" />
+        <div className="relative">
+          <Brand />
+        </div>
       </header>
 
       <nav className="flex items-stretch gap-1 border-b border-gold-600/20 px-2">
