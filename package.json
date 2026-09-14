@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "//": "Node 22+ is required by wrangler and @supabase/supabase-js. Pinning anything lower builds fine and then fails at deploy — see .node-version.",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
