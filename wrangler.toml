@@ -9,6 +9,12 @@
 name = "barbering-shop"
 compatibility_date = "2025-01-01"
 
+# Publish the <name>.<subdomain>.workers.dev URL. Without this the Worker can
+# deploy successfully and still have no hostname pointing at it, which looks
+# like a broken site ("cannot be reached") rather than a routing gap.
+# A custom domain is added in the dashboard and works alongside this.
+workers_dev = true
+
 [assets]
 directory = "./dist"
 
