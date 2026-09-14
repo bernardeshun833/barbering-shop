@@ -26,17 +26,33 @@ export default function LockScreen({
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
 
-  const submit = async () => {
-    setChecking(true);
-    const ok = await verifyPin(pin, barber);
-    setChecking(false);
+  /**
+   * The fourth digit is the whole instruction — there is nothing left to
+   * confirm, so there is no button to press. Verification is fired from the
+   * keypad handler rather than an effect so it runs exactly once per attempt.
+   */
+  const onDigits = (next: string) => {
+    if (checking) return;
 
-    if (!ok) {
+    setError(null);
+    setPin(next);
+    if (next.length !== 4) return;
+
+    void (async () => {
+      setChecking(true);
+      const ok = await verifyPin(next, barber);
+      setChecking(false);
+
+      if (ok) {
+        onUnlock();
+        return;
+      }
+
+      // Cleared, so the next attempt starts from an empty row of dots rather
+      // than leaving her to work out which digit to delete.
       setPin("");
-      setError("Wrong PIN");
-      return;
-    }
-    onUnlock();
+      setError("That PIN is not right — try again");
+    })();
   };
 
   return (
@@ -70,19 +86,17 @@ export default function LockScreen({
           ))}
         </div>
 
-        {error && <p className="text-center text-gold-200">{error}</p>}
-
-        <NumPad value={pin} onChange={setPin} />
-
-        <button
-          type="button"
-          className="btn-primary"
-          disabled={pin.length !== 4 || checking}
-          onClick={submit}
+        {/* Fixed height: the message appearing and clearing must not shift the
+            keypad under her thumb mid-attempt. */}
+        <p
+          className="min-h-[1.5rem] text-center text-gold-200"
+          role="status"
+          aria-live="polite"
         >
-          {checking ? "Checking…" : "Open"}
-          {!checking && <span aria-hidden="true">→</span>}
-        </button>
+          {checking ? "Checking…" : error}
+        </p>
+
+        <NumPad value={pin} onChange={onDigits} />
       </div>
     </div>
   );
