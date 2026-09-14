@@ -3,7 +3,7 @@ import type { Barber, Service } from "../types";
 
 /** PINs are shown on screen in demo mode, so they are no secret here. */
 export const DEMO_PINS: Record<string, string> = {
-  Effe: "1212"
+  "Ohemaa Effe": "1212"
 };
 
 // Same hash as supabase/seed.sql, so the demo behaves exactly like a real
@@ -11,7 +11,7 @@ export const DEMO_PINS: Record<string, string> = {
 const DEMO_BARBERS: Barber[] = [
   {
     id: "demo-barber-1",
-    name: "Effe",
+    name: "Ohemaa Effe",
     pin_hash: "3f57b1510a156f3f0a4057cc5bfa37df41523018d9c59535b9deb419eccd157b",
     pin_salt: "4feeccfeb57b58b9",
     pin_iterations: 200000,

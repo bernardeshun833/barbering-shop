@@ -1,9 +1,24 @@
+import { useState } from "react";
+
 /**
- * Crown over crossed scissors, drawn rather than imported so the shop's mark
- * ships inside the bundle and renders on a tablet that has never been online.
- *
- * To use the real artwork instead, drop it at public/logo.svg and swap the
- * <LogoMark> body for an <img src="logo.svg" />; nothing else here changes.
+ * Walks a list of candidate files, moving to the next when one fails to load,
+ * and reports exhaustion so the caller can fall back to drawn artwork. SVG is
+ * tried before PNG; a PNG renamed to .svg would be served with the wrong
+ * content type and silently refuse to render, so both are listed properly.
+ */
+function useImageCandidates(sources: string[]) {
+  const [index, setIndex] = useState(0);
+  return {
+    src: sources[index],
+    exhausted: index >= sources.length,
+    onError: () => setIndex((i) => i + 1)
+  };
+}
+
+/**
+ * Crown over crossed scissors, drawn so the app has a mark before the shop's
+ * artwork arrives. Replaced automatically by public/logo-mark.svg when that
+ * file exists — see public/brand/README.md.
  */
 export function LogoMark({ className = "h-10 w-10" }: { className?: string }) {
   return (
@@ -30,8 +45,12 @@ export function LogoMark({ className = "h-10 w-10" }: { className?: string }) {
 }
 
 /**
- * The full lockup. `stacked` is the tall version for the lock screen; the
- * inline version sits in the header beside the tabs.
+ * The full lockup.
+ *
+ * Prefers the shop's own artwork and falls back to the drawn mark plus the
+ * device's serif, so the app is never without a brand and never shows a
+ * broken image. `stacked` is the tall version for the lock screen; the inline
+ * version sits in the header beside the tabs.
  */
 export default function Brand({
   stacked = false,
@@ -40,7 +59,25 @@ export default function Brand({
   stacked?: boolean;
   className?: string;
 }) {
+  const lockup = useImageCandidates(["logo.svg", "logo.png"]);
+  const mark = useImageCandidates(["logo-mark.svg", "logo-mark.png"]);
+
   if (stacked) {
+    // The lockup file carries mark, wordmark and strapline together, so when
+    // it loads it stands alone rather than being captioned twice.
+    if (!lockup.exhausted) {
+      return (
+        <div className={`flex flex-col items-center ${className}`}>
+          <img
+            src={lockup.src}
+            alt="Effé Barbering Shop"
+            className="h-44 w-auto max-w-[80%] object-contain"
+            onError={lockup.onError}
+          />
+        </div>
+      );
+    }
+
     return (
       <div className={`flex flex-col items-center ${className}`}>
         <LogoMark className="h-20 w-20 text-gold-300" />
@@ -54,7 +91,11 @@ export default function Brand({
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <LogoMark className="h-9 w-9 text-gold-300" />
+      {mark.exhausted ? (
+        <LogoMark className="h-9 w-9 text-gold-300" />
+      ) : (
+        <img src={mark.src} alt="" className="h-9 w-9 object-contain" onError={mark.onError} />
+      )}
       <span className="wordmark text-2xl leading-none">Effé</span>
     </div>
   );
