@@ -41,10 +41,12 @@ export function PhotoPanel({
 export default function Backdrop({
   src,
   className = "",
+  imgClassName = "object-center",
   scrim = "from-ink-900/60 via-ink-900/85 to-ink-900"
 }: {
   src: string;
   className?: string;
+  imgClassName?: string;
   scrim?: string;
 }) {
   const [failed, setFailed] = useState(false);
@@ -55,7 +57,7 @@ export default function Backdrop({
       <img
         src={src}
         alt=""
-        className="h-full w-full object-cover"
+        className={`h-full w-full object-cover ${imgClassName}`}
         onError={() => setFailed(true)}
       />
       <div className={`absolute inset-0 bg-gradient-to-b ${scrim}`} />

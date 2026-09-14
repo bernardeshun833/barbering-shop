@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { PhotoPanel } from "../components/Backdrop";
+import Backdrop from "../components/Backdrop";
 import NumPad from "../components/NumPad";
 import { db, queueTransaction, transactionsForLocalDate } from "../lib/db";
 import { getDeviceId } from "../lib/device";
@@ -30,23 +30,41 @@ export default function TodayLog() {
   const total = txns.reduce((sum, t) => sum + t.amount, 0);
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-4">
-      {/* Wraps rather than collides: the date and the running total both grow,
-          and on a phone they will not share a line. */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h1 className="text-xl font-semibold">Today · {shiftDate}</h1>
-        <p className="text-lg text-cream/80">
-          {txns.length} {txns.length === 1 ? "entry" : "entries"} · GHS {total.toFixed(2)}
-        </p>
-      </div>
+    <div className="relative flex min-h-full flex-1 flex-col">
+      {/* The shop's own photograph as the page's backdrop rather than a card
+          in the list. Anchored to the bottom so the chair stays in frame as
+          the day's entries grow, and under a heavy scrim: these are the
+          numbers the owner is trusting, and they have to stay readable on a
+          tablet in daylight. */}
+      <Backdrop
+        src="today.jpg"
+        imgClassName="object-bottom"
+        scrim="from-ink-900/96 via-ink-900/90 to-ink-900/72"
+      />
 
-      {txns.length === 0 && (
-        <p className="rounded-xl bg-ink-700 p-6 text-center text-cream/55">
-          No sales logged yet today.
-        </p>
-      )}
+      <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-4">
+        {/* Wraps rather than collides: the date and the running total both grow,
+            and on a phone they will not share a line. */}
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h1 className="text-xl font-semibold drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">
+            Today · {shiftDate}
+          </h1>
+          {/* A shadow rather than a heavier scrim: the takings have to stay
+              readable wherever the photograph happens to be bright, without
+              flattening the picture everywhere else. */}
+          <p className="text-lg text-cream drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">
+            {txns.length} {txns.length === 1 ? "entry" : "entries"} · GHS{" "}
+            {total.toFixed(2)}
+          </p>
+        </div>
 
-      <ul className="flex flex-col gap-2">
+        {txns.length === 0 && (
+          <p className="panel p-6 text-center text-cream/55">
+            No sales logged yet today.
+          </p>
+        )}
+
+        <ul className="flex flex-col gap-2">
         {[...txns]
           .sort((a, b) => b.created_at_local.localeCompare(a.created_at_local))
           .map((txn) => {
@@ -55,7 +73,10 @@ export default function TodayLog() {
             return (
               <li
                 key={txn.id}
-                className={`flex items-center justify-between rounded-xl border border-gold-600/25 bg-ink-700 p-3 ${
+                // Slightly translucent so the photograph reads as a backdrop
+                // rather than a band behind each row, while the text keeps
+                // enough contrast to be read at a glance.
+                className={`flex items-center justify-between rounded-xl border border-gold-600/25 bg-ink-700/90 p-3 backdrop-blur-sm ${
                   wasVoided ? "opacity-50" : ""
                 }`}
               >
@@ -99,12 +120,8 @@ export default function TodayLog() {
               </li>
             );
           })}
-      </ul>
-
-      {/* The shop's own image, when it exists. Sits below the day's entries so
-          it never pushes the numbers off the screen, and disappears entirely
-          when the file is not there. */}
-      <PhotoPanel src="today.jpg" />
+        </ul>
+      </div>
 
       {voiding && (
         <VoidDialog
