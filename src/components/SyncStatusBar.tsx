@@ -1,4 +1,5 @@
 import type { SyncStatus } from "../hooks/useSyncStatus";
+import { DEMO_MODE } from "../lib/supabase";
 
 function relativeTime(date: Date | null): string {
   if (!date) return "never";
@@ -15,6 +16,22 @@ function relativeTime(date: Date | null): string {
  * this tablet, because that is exactly what is lost if the device goes.
  */
 export default function SyncStatusBar({ status }: { status: SyncStatus }) {
+  // "synced 2m ago" would be a claim that a server holds the data. In demo
+  // mode nothing does, and the status bar is the last place to be loose
+  // about that.
+  if (DEMO_MODE) {
+    return (
+      <div className="flex items-center justify-between bg-gray-800 px-4 py-2 text-sm text-gray-300">
+        <span className="font-medium">
+          {status.online ? "Demo mode" : "Offline — sales are being saved on this device"}
+        </span>
+        <span>
+          {status.pending > 0 ? `${status.pending} waiting · ` : ""}saved in this browser
+        </span>
+      </div>
+    );
+  }
+
   const stale =
     !status.lastSyncedAt || Date.now() - status.lastSyncedAt.getTime() > 30 * 60 * 1000;
 

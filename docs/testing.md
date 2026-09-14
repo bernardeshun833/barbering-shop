@@ -75,9 +75,23 @@ In **Workers & Pages → Create → Import a repository**, pick
 and routes unknown paths back to the app, so `/today` and `/cash-count` survive
 a refresh.
 
-**The one thing that will bite you:** the Supabase URL and key are baked in at
-build time, so they must be set as **build environment variables** in
-Cloudflare — Settings → Variables and Secrets — before the first deploy:
+### Deploy it with no backend at all
+
+Set nothing and it deploys as a **demo**: the barber and service lists are
+built in, sales go into the browser's own storage, and nothing is sent
+anywhere. An orange banner says so on every screen, and the PINs are printed
+behind the button beside it.
+
+That is enough to try the whole tablet experience on a real phone over your own
+domain — log sales, enter a wrong PIN, void an entry, run a cash count, put the
+phone in aeroplane mode — before a Supabase project exists. It is not a till:
+close the browser data and the takings are gone. When you add the variables
+below, the demo turns itself off.
+
+**The one thing that will bite you when you go real:** the Supabase URL and key
+are baked in at build time, so they must be set as **build environment
+variables** in Cloudflare — Settings → Variables and Secrets — before that
+deploy:
 
 ```
 VITE_SUPABASE_URL         https://<ref>.supabase.co
@@ -86,8 +100,8 @@ VITE_DEVICE_EMAIL         device@yourshop.example
 VITE_DEVICE_PASSWORD      <the device account password>
 ```
 
-Miss those and the build still succeeds — you just get a blank screen on the
-phone, because the app throws on startup with nothing to connect to.
+Set one but not the other and you get the demo, not the real thing — check the
+banner is gone before trusting anything the app tells you.
 
 Only the `anon` key belongs here. It is meant to be public, and the database's
 row-level security is what limits it to inserting sales and cash counts. The

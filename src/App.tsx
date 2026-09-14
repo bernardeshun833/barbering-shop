@@ -6,13 +6,63 @@ import CashCount from "./pages/CashCount";
 import TodayLog from "./pages/TodayLog";
 import TransactionEntry from "./pages/TransactionEntry";
 import { db } from "./lib/db";
-import { supabase } from "./lib/supabase";
+import { DEMO_MODE, supabase } from "./lib/supabase";
+import { DEMO_PINS, resetDemo, seedDemoData } from "./lib/demo";
 
 const TABS = [
   { to: "/", label: "New sale" },
   { to: "/today", label: "Today" },
   { to: "/cash-count", label: "Cash count" }
 ];
+
+/**
+ * Unmissable on purpose. Someone handed this link will otherwise assume they
+ * are looking at the real till — and a POS whose takings quietly live only in
+ * one browser, on one phone, is the exact failure this whole system exists to
+ * prevent. Better to labour the point than to be mistaken for production.
+ */
+function DemoBanner() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="bg-amber-500 px-4 py-2 text-sm text-amber-950">
+      <div className="flex items-center justify-between gap-3">
+        <span>
+          <strong>Demo.</strong> No shop database connected — everything stays in
+          this browser.
+        </span>
+        <button
+          type="button"
+          className="shrink-0 rounded-lg border border-amber-900/40 px-3 py-1 font-medium"
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? "Hide" : "PINs"}
+        </button>
+      </div>
+
+      {open && (
+        <div className="mt-2 border-t border-amber-900/25 pt-2">
+          <ul className="flex flex-wrap gap-x-4 gap-y-1">
+            {Object.entries(DEMO_PINS).map(([name, pin]) => (
+              <li key={name}>
+                {name}: <strong>{pin}</strong>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="mt-2 rounded-lg border border-amber-900/40 px-3 py-1 font-medium"
+            onClick={() => {
+              void resetDemo().then(() => window.location.reload());
+            }}
+          >
+            Clear demo sales
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function App() {
   const status = useSyncStatus();
@@ -21,6 +71,12 @@ export default function App() {
 
   useEffect(() => {
     void (async () => {
+      if (DEMO_MODE) {
+        await seedDemoData();
+        setReady(true);
+        return;
+      }
+
       // Sign-in is best effort. A tablet that cannot reach Supabase must still
       // reach the sale screen — that is the entire point of offline-first, and
       // a failed auth call is exactly what happens when the network is down.
@@ -55,6 +111,7 @@ export default function App() {
 
   return (
     <div className="flex h-full flex-col">
+      {DEMO_MODE && <DemoBanner />}
       <SyncStatusBar status={status} />
 
       <nav className="flex gap-1 border-b border-gray-800 px-2">

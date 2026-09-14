@@ -97,9 +97,12 @@ through the dashboard SQL editor, the PWA deploys to Cloudflare (see
 `wrangler.toml`) or GitHub Pages so it can be installed on a real phone, and
 the nightly job is deployed and triggered from the Actions tab.
 
-The Supabase URL and anon key are baked in at build time, so they must be set
-as build environment variables on whichever host you use — miss them and the
-build succeeds but the app shows a blank screen.
+With no Supabase URL and anon key configured, the app runs as a **demo**:
+built-in barbers and services, sales kept in the browser, nothing sent
+anywhere, and an orange banner on every screen saying so. That makes the tablet
+experience testable on a real phone before a backend exists. Setting the two
+variables — they are baked in at build time, so they belong in the host's build
+environment — turns the demo off.
 
 ## Running it locally
 

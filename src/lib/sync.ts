@@ -1,5 +1,5 @@
 import { db, getMeta, pendingCashCounts, pendingTransactions, setMeta } from "./db";
-import { supabase } from "./supabase";
+import { DEMO_MODE, supabase } from "./supabase";
 import { getDeviceId } from "./device";
 import type { Barber, Service, ShopSettings } from "../types";
 
@@ -43,6 +43,13 @@ async function runSync(): Promise<SyncResult> {
     return { pushed: 0, failed: 0, refreshed: false, error: "offline" };
   }
 
+  // No backend configured: accept the queue locally so the entry flow behaves
+  // as it will in production, without pretending a server received anything.
+  // The demo banner is what tells the truth about where the data actually is.
+  if (DEMO_MODE) {
+    return acceptQueueLocally();
+  }
+
   try {
     const pushed = await pushQueue();
     const refreshed = await pullReferenceData();
@@ -59,6 +66,27 @@ async function runSync(): Promise<SyncResult> {
       error: error instanceof Error ? error.message : String(error)
     };
   }
+}
+
+/**
+ * Demo equivalent of a successful push: the queue drains so the status bar
+ * and the Today screen behave as they will in the shop, but nothing leaves
+ * the device and nothing is fabricated about a server having stored it.
+ */
+async function acceptQueueLocally(): Promise<SyncResult> {
+  const [txns, counts] = await Promise.all([pendingTransactions(), pendingCashCounts()]);
+
+  for (const txn of txns) {
+    await db.transactions.update(txn.id, { sync_state: "synced" });
+  }
+  for (const count of counts) {
+    await db.cashCounts.update(count.id, { sync_state: "synced" });
+  }
+
+  await setMeta(LAST_SYNC_KEY, new Date().toISOString());
+  consecutiveFailures = 0;
+
+  return { pushed: txns.length + counts.length, failed: 0, refreshed: false };
 }
 
 async function pushQueue(): Promise<{ pushed: number; failed: number }> {
