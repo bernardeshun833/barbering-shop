@@ -1,0 +1,50 @@
+name: Run nightly reconciliation
+
+# Runs the nightly job on demand and prints what it did. Use this instead of
+# opening the function URL in a browser: the call is authenticated with the
+# service role key from secrets, so the function does not have to be left
+# publicly invocable just to be testable.
+#
+# Secrets required:
+#   SUPABASE_PROJECT_REF
+#   SUPABASE_SERVICE_ROLE_KEY  — dashboard → Project Settings → API
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Business date to reconcile (YYYY-MM-DD). Leave blank for today, which also revises any earlier day whose sales arrived late."
+        required: false
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invoke the function
+        run: |
+          URL="https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/nightly-reconciliation"
+          if [ -n "${{ inputs.date }}" ]; then
+            URL="$URL?date=${{ inputs.date }}"
+            echo "Reconciling ${{ inputs.date }} only (no look-back for late data)."
+          else
+            echo "Reconciling today, and revising any earlier day whose sales arrived late."
+          fi
+
+          STATUS=$(curl -sS -o response.json -w '%{http_code}' -X POST "$URL" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json")
+
+          echo "HTTP $STATUS"
+          cat response.json
+          echo
+
+          # The function reports its own failures in the body with a 500, so a
+          # green tick here should mean the night actually reconciled.
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Reconciliation failed — see the response above."
+            exit 1
+          fi
+
+          REVISED=$(node -e "process.stdout.write(JSON.stringify(require('./response.json').revised ?? []))")
+          echo "::notice::Revised earlier days: $REVISED"

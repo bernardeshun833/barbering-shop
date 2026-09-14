@@ -89,6 +89,14 @@ fills with HIGH flags for money that did in fact arrive.
 
 `tests/cash-only.test.ts` covers the switch in both positions.
 
+## Testing it without a dev environment
+
+`docs/testing.md` is a runbook for verifying the whole system with nothing but
+a laptop, a phone and GitHub — no Docker and no Supabase CLI. Migrations go in
+through the dashboard SQL editor, the PWA deploys to GitHub Pages so it can be
+installed on a real phone, and the nightly job is deployed and triggered from
+the Actions tab.
+
 ## Running it locally
 
 ```bash

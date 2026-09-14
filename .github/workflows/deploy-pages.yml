@@ -1,0 +1,68 @@
+name: Deploy tablet app
+
+# Publishes the PWA to GitHub Pages so it can be installed and tested on a
+# real phone or tablet without any local tooling. Run it from the Actions tab
+# (the "Run workflow" button works fine from a phone).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; the newer one wins.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Fail early if the app has no backend to talk to
+        run: |
+          if [ -z "${{ secrets.VITE_SUPABASE_URL }}" ] || [ -z "${{ secrets.VITE_SUPABASE_ANON_KEY }}" ]; then
+            echo "::error::Set the VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY repository secrets first."
+            echo "Without them the app builds but shows a blank screen — see docs/testing.md."
+            exit 1
+          fi
+
+      - run: npm run build
+        env:
+          # Pages serves from https://<user>.github.io/<repo>/
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_DEVICE_EMAIL: ${{ secrets.VITE_DEVICE_EMAIL }}
+          VITE_DEVICE_PASSWORD: ${{ secrets.VITE_DEVICE_PASSWORD }}
+
+      # Pages has no SPA rewrite, so a refresh on /today would 404. Serving
+      # the same document as 404.html hands those routes back to the router.
+      - run: cp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

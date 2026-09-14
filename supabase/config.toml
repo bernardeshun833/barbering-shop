@@ -22,8 +22,13 @@ additional_redirect_urls = ["http://localhost:5173"]
 
 # Edge Functions. Secrets (MoMo, Resend, WhatsApp credentials) are set via
 # `supabase secrets set` — never committed here.
+#
+# Both require a valid JWT. Every caller already sends one: the pg_cron jobs
+# pass the service role key (migration 0005), and so does the "Run nightly
+# reconciliation" workflow. Left open, anyone who learned the URL could
+# trigger the owner's email at will and read back the day's severity.
 [functions.momo-sync]
-verify_jwt = false
+verify_jwt = true
 
 [functions.nightly-reconciliation]
-verify_jwt = false
+verify_jwt = true
