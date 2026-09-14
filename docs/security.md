@@ -52,6 +52,10 @@ pretending otherwise in the nightly report would be worse than saying it.
 
 **Moderate:** cash against the physical count, recomputed server-side from POS
 data so a wrong `expected` typed on the tablet cannot paper over a variance.
+The expected total is deliberately never shown on the tablet either: a count
+taken against a figure already on screen tells whoever holds the cash exactly
+what total to produce, which turns the one independent measurement of the day
+into a copying exercise.
 Defeated by simply not logging the sale and pocketing the cash — the drawer
 still balances against what was declared.
 

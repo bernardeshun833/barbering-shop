@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { useLiveQuery } from "dexie-react-hooks";
+import LockScreen from "./components/LockScreen";
 import SyncStatusBar from "./components/SyncStatusBar";
 import { useSyncStatus } from "./hooks/useSyncStatus";
 import CashCount from "./pages/CashCount";
 import TodayLog from "./pages/TodayLog";
 import TransactionEntry from "./pages/TransactionEntry";
 import { db } from "./lib/db";
+import type { Barber } from "./types";
 import { DEMO_MODE, supabase } from "./lib/supabase";
 import { DEMO_PINS, resetDemo, seedDemoData } from "./lib/demo";
 
@@ -68,6 +71,10 @@ export default function App() {
   const status = useSyncStatus();
   const [ready, setReady] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [unlocked, setUnlocked] = useState(false);
+
+  const barbers = useLiveQuery(() => db.barbers.toArray(), [], [] as Barber[]);
+  const soleBarber = barbers.length === 1 ? barbers[0] : null;
 
   useEffect(() => {
     void (async () => {
@@ -109,6 +116,17 @@ export default function App() {
     );
   }
 
+  // One barber on the books means the PIN is a start-of-shift unlock rather
+  // than a per-sale step. Locked again on every reload, and by the Lock button.
+  if (soleBarber && !unlocked) {
+    return (
+      <div className="flex h-full flex-col">
+        {DEMO_MODE && <DemoBanner />}
+        <LockScreen barber={soleBarber} onUnlock={() => setUnlocked(true)} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col">
       {DEMO_MODE && <DemoBanner />}
@@ -131,6 +149,16 @@ export default function App() {
             {tab.label}
           </NavLink>
         ))}
+
+        {soleBarber && (
+          <button
+            type="button"
+            className="min-h-touch px-4 text-sm font-medium text-gray-500"
+            onClick={() => setUnlocked(false)}
+          >
+            Lock
+          </button>
+        )}
       </nav>
 
       {setupError && (

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import NumPad from "../components/NumPad";
 import { db, queueTransaction } from "../lib/db";
@@ -29,7 +29,13 @@ export default function TransactionEntry() {
     (m) => !m.digital || settings?.momo_enabled === true
   );
 
-  const [step, setStep] = useState<Step>("barber");
+  // With one barber the PIN was already given to unlock the app at the start
+  // of the shift (see LockScreen), so neither the barber step nor the PIN step
+  // has anything left to ask.
+  const soleBarber = barbers.length === 1 ? barbers[0] : null;
+  const firstStep: Step = soleBarber ? "service" : "barber";
+
+  const [step, setStep] = useState<Step>(firstStep);
   const [barber, setBarber] = useState<Barber | null>(null);
   const [service, setService] = useState<Service | null>(null);
   const [method, setMethod] = useState<PaymentMethod | null>(null);
@@ -37,8 +43,17 @@ export default function TransactionEntry() {
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
 
+  // The barber list arrives asynchronously from IndexedDB, so the opening step
+  // is corrected once it lands rather than leaving a dead "who did the cut?"
+  // screen for a shop with one barber.
+  useEffect(() => {
+    if (soleBarber && step === "barber") setStep("service");
+  }, [soleBarber, step]);
+
+  const activeBarber = soleBarber ?? barber;
+
   const reset = () => {
-    setStep("barber");
+    setStep(soleBarber ? "service" : "barber");
     setBarber(null);
     setService(null);
     setMethod(null);
@@ -46,6 +61,29 @@ export default function TransactionEntry() {
     setError(null);
   };
 
+  const record = async (
+    forBarber: Barber,
+    forService: Service,
+    forMethod: PaymentMethod
+  ) => {
+    // Written to IndexedDB before anything touches the network. The sale is
+    // durable the moment it is recorded, whatever the connection is doing.
+    await queueTransaction({
+      id: crypto.randomUUID(),
+      barber_id: forBarber.id,
+      service_id: forService.id,
+      amount: forService.price,
+      payment_method: forMethod,
+      corrects_transaction_id: null,
+      created_at_local: new Date().toISOString(),
+      device_id: getDeviceId()
+    });
+
+    setStep("done");
+    void sync();
+  };
+
+  /** Multi-barber path: the PIN is what attributes the row, so it is asked here. */
   const confirm = async () => {
     if (!barber || !service || !method) return;
     setChecking(true);
@@ -59,22 +97,38 @@ export default function TransactionEntry() {
       return;
     }
 
-    // Written to IndexedDB before anything touches the network. The sale is
-    // durable the moment the PIN is accepted, whatever the connection is doing.
-    await queueTransaction({
-      id: crypto.randomUUID(),
-      barber_id: barber.id,
-      service_id: service.id,
-      amount: service.price,
-      payment_method: method,
-      corrects_transaction_id: null,
-      created_at_local: new Date().toISOString(),
-      device_id: getDeviceId()
-    });
-
+    await record(barber, service, method);
     setChecking(false);
-    setStep("done");
-    void sync();
+  };
+
+  /** Moves on from a chosen service: straight to the sale when there is nothing left to ask. */
+  const afterService = (chosen: Service) => {
+    setService(chosen);
+
+    if (paymentMethods.length > 1) {
+      setStep("payment");
+      return;
+    }
+
+    const onlyMethod = paymentMethods[0].value;
+    setMethod(onlyMethod);
+
+    if (soleBarber) {
+      void record(soleBarber, chosen, onlyMethod);
+    } else {
+      setStep("pin");
+    }
+  };
+
+  /** Same, for a chosen payment method. */
+  const afterMethod = (chosen: PaymentMethod) => {
+    setMethod(chosen);
+
+    if (soleBarber && service) {
+      void record(soleBarber, service, chosen);
+    } else {
+      setStep("pin");
+    }
   };
 
   if (step === "done") {
@@ -84,7 +138,8 @@ export default function TransactionEntry() {
           <p className="text-5xl">✓</p>
           <p className="mt-4 text-2xl font-semibold">Sale recorded</p>
           <p className="mt-2 text-gray-400">
-            {service?.name} · GHS {service?.price.toFixed(2)} · {method} · {barber?.name}
+            {service?.name} · GHS {service?.price.toFixed(2)} · {method} ·{" "}
+            {activeBarber?.name}
           </p>
         </div>
         <button type="button" className="btn-primary max-w-sm" onClick={reset}>
@@ -98,13 +153,15 @@ export default function TransactionEntry() {
     <div className="flex flex-1 flex-col gap-4 p-4">
       <StepHeader
         step={step}
-        barber={barber}
+        firstStep={firstStep}
+        barber={activeBarber}
         service={service}
         method={method}
         onBack={() => {
           setError(null);
           if (step === "service") setStep("barber");
           if (step === "payment") setStep("service");
+          // (the sole-barber path never reaches the pin step)
           if (step === "pin") {
             setPin("");
             // Skip the payment step on the way back too, when it was skipped
@@ -139,18 +196,7 @@ export default function TransactionEntry() {
               key={s.id}
               type="button"
               className="tile flex-col gap-1"
-              onClick={() => {
-                setService(s);
-                // With only one payment method there is nothing to choose;
-                // making the manager tap "Cash" every time is a tap that
-                // teaches them to tap without reading.
-                if (paymentMethods.length === 1) {
-                  setMethod(paymentMethods[0].value);
-                  setStep("pin");
-                } else {
-                  setStep("payment");
-                }
-              }}
+              onClick={() => afterService(s)}
             >
               <span>{s.name}</span>
               <span className="text-sm text-gray-400">GHS {s.price.toFixed(2)}</span>
@@ -166,10 +212,7 @@ export default function TransactionEntry() {
               key={m.value}
               type="button"
               className="tile"
-              onClick={() => {
-                setMethod(m.value);
-                setStep("pin");
-              }}
+              onClick={() => afterMethod(m.value)}
             >
               {m.label}
             </button>
@@ -214,12 +257,14 @@ function Grid({ children }: { children: React.ReactNode }) {
 
 function StepHeader({
   step,
+  firstStep,
   barber,
   service,
   method,
   onBack
 }: {
   step: Step;
+  firstStep: Step;
   barber: Barber | null;
   service: Service | null;
   method: PaymentMethod | null;
@@ -234,7 +279,7 @@ function StepHeader({
 
   return (
     <div className="flex items-center gap-3">
-      {step !== "barber" && (
+      {step !== firstStep && (
         <button type="button" className="btn-secondary px-4" onClick={onBack}>
           ←
         </button>

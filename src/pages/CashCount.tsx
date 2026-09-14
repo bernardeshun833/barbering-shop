@@ -33,12 +33,13 @@ export default function CashCount() {
     [todaysTxns]
   );
 
-  // Shown to the manager so the count is a real comparison rather than a
-  // number typed into a void. The server recomputes this independently during
-  // reconciliation, so a wrong `expected` here cannot hide a cash variance.
+  // Computed, recorded, and deliberately never shown. A count taken against a
+  // number already on screen is not really a count: it tells whoever is
+  // holding the cash exactly what total to produce. Blind counting is the
+  // whole value of the exercise, and the reconciliation job recomputes this
+  // server-side anyway, so nothing is lost by keeping it off the tablet.
   const expected = cashTaken + openingFloat;
   const actualNumber = Number.parseFloat(actual);
-  const variance = Number.isFinite(actualNumber) ? actualNumber - expected : null;
 
   const submit = async () => {
     if (!Number.isFinite(actualNumber) || countedBy.trim().length === 0) return;
@@ -65,8 +66,7 @@ export default function CashCount() {
         <p className="text-2xl font-semibold">Cash count recorded for {shiftDate}</p>
         {count && (
           <p className="text-gray-400">
-            Counted GHS {count.actual.toFixed(2)} against GHS {count.expected.toFixed(2)}{" "}
-            expected · counted by {count.counted_by}
+            GHS {count.actual.toFixed(2)} counted by {count.counted_by}
           </p>
         )}
         <p className="max-w-md text-sm text-gray-500">
@@ -83,26 +83,21 @@ export default function CashCount() {
       <div>
         <h1 className="text-xl font-semibold">End of shift cash count</h1>
         <p className="text-sm text-gray-400">
-          {shiftDate} · count the drawer with a second person present
+          {shiftDate} · count it with someone else present if you can
         </p>
       </div>
 
-      <dl className="grid grid-cols-2 gap-3 rounded-xl bg-gray-800 p-4 text-sm">
-        <dt className="text-gray-400">Opening float</dt>
-        <dd className="text-right">GHS {openingFloat.toFixed(2)}</dd>
-        <dt className="text-gray-400">Cash sales logged today</dt>
-        <dd className="text-right">GHS {cashTaken.toFixed(2)}</dd>
-        <dt className="font-medium">Expected in drawer</dt>
-        <dd className="text-right font-medium">GHS {expected.toFixed(2)}</dd>
-      </dl>
+      <p className="rounded-xl bg-gray-800 p-4 text-sm text-gray-400">
+        Count everything in the drawer, including the float, and type the total.
+      </p>
 
       <label className="flex flex-col gap-2">
-        <span className="text-sm text-gray-400">Counted by (both names)</span>
+        <span className="text-sm text-gray-400">Counted by</span>
         <input
           className="min-h-touch rounded-xl border border-gray-700 bg-gray-800 px-4 text-lg"
           value={countedBy}
           onChange={(e) => setCountedBy(e.target.value)}
-          placeholder="e.g. Ama & Kofi"
+          placeholder="Your name, and anyone who counted with you"
         />
       </label>
 
@@ -116,20 +111,6 @@ export default function CashCount() {
           placeholder="0.00"
         />
       </label>
-
-      {variance !== null && (
-        <p
-          className={`rounded-xl p-3 text-center text-lg ${
-            Math.abs(variance) < 0.005
-              ? "bg-emerald-900/40 text-emerald-200"
-              : "bg-amber-900/40 text-amber-100"
-          }`}
-        >
-          {Math.abs(variance) < 0.005
-            ? "Drawer balances"
-            : `${variance > 0 ? "Over" : "Short"} by GHS ${Math.abs(variance).toFixed(2)}`}
-        </p>
-      )}
 
       <label className="flex flex-col gap-2">
         <span className="text-sm text-gray-400">Notes (optional)</span>

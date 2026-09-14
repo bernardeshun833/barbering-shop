@@ -30,7 +30,7 @@ To see the tablet itself:
 npm run dev
 ```
 
-Open it, log a sale (dev PINs are Kwame `1234`, Ama `2345`, Yaw `3456`), then
+Open it, unlock with Effe's PIN (`1212` in the seed data), log a sale, then
 open devtools → Network → **Offline** and log a few more. The top bar counts
 what is waiting. Go back online and watch it drain. That is the offline
 guarantee, demonstrated.
