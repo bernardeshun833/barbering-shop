@@ -17,8 +17,12 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      // The edge functions import the Supabase client from JSR, which only
+      // Deno resolves. Pointing it at the npm package (same library, same
+      // types) lets tsc check the functions too — see supabase/functions/deno.d.ts.
+      "jsr:@supabase/supabase-js@2": ["node_modules/@supabase/supabase-js"]
     }
   },
-  "include": ["src", "tests", "vite.config.ts"]
+  "include": ["src", "tests", "vite.config.ts", "supabase/functions"]
 }

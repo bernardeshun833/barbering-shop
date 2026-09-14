@@ -56,13 +56,50 @@ mobile money is live and switch it on later with one flag:
   configured, that is one MEDIUM flag saying the settings no longer describe the
   business — one flag, not one per row.
 
-Turning it on is a database change and the next sync, with no new build:
+Nothing MoMo-related runs while the shop is cash-only: the `momo-sync` cron job
+is deliberately not scheduled (migration `0007`), so there is no point polling
+an API the business has no credentials for. Only `nightly-reconciliation` is
+scheduled, and it runs fine with no MoMo data — it is what emails the owner
+every day and builds the baseline the volume checks need.
+
+### Switching MoMo on later
+
+Three steps, no rebuild and nothing to reinstall on the tablet:
 
 ```sql
+-- 1. Flip the flag. The tablet picks it up on its next sync.
 update shop_settings set momo_enabled = true;
 ```
 
+```bash
+# 2. Set the credentials and deploy the function.
+supabase secrets set MOMO_BASE_URL=... MOMO_SUBSCRIPTION_KEY=... \
+                     MOMO_API_USER=... MOMO_API_KEY=... MOMO_TARGET_ENVIRONMENT=...
+supabase functions deploy momo-sync
+```
+
+```sql
+-- 3. Start polling. The exact statement is in migration 0007.
+select cron.schedule('momo-sync', '*/15 * * * *', $job$ ... $job$);
+```
+
+Do step 3 **before** step 1 if you can: with the flag on and no MoMo data
+flowing, every digital sale reconciles against an empty feed and the report
+fills with HIGH flags for money that did in fact arrive.
+
 `tests/cash-only.test.ts` covers the switch in both positions.
+
+## Testing it without a dev environment
+
+`docs/testing.md` is a runbook for verifying the whole system with nothing but
+a laptop, a phone and GitHub — no Docker and no Supabase CLI. Migrations go in
+through the dashboard SQL editor, the PWA deploys to Cloudflare (see
+`wrangler.toml`) or GitHub Pages so it can be installed on a real phone, and
+the nightly job is deployed and triggered from the Actions tab.
+
+The Supabase URL and anon key are baked in at build time, so they must be set
+as build environment variables on whichever host you use — miss them and the
+build succeeds but the app shows a blank screen.
 
 ## Running it locally
 
@@ -85,20 +122,20 @@ the checks can be developed and tested without a backend at all.
 
 ```bash
 supabase link --project-ref <ref>
-supabase db push                              # migrations 0001–0005
+supabase db push                              # migrations 0001–0007
 supabase db execute --file supabase/seed.sql  # dev/demo data only
 
+# MoMo secrets are not needed while the shop is cash-only — see above.
 supabase secrets set \
-  MOMO_BASE_URL=... MOMO_SUBSCRIPTION_KEY=... MOMO_API_USER=... MOMO_API_KEY=... \
   RESEND_API_KEY=... REPORT_FROM_EMAIL=... \
   TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_WHATSAPP_FROM=...
 
-supabase functions deploy momo-sync
 supabase functions deploy nightly-reconciliation
 ```
 
-Migration 0005 schedules both jobs with pg_cron. Before it runs, set the two
-database settings it reads:
+Migration 0005 schedules the cron jobs with pg_cron and 0007 unschedules
+`momo-sync` again, leaving only the nightly job running. Before they run, set
+the two database settings they read:
 
 ```sql
 alter database postgres set app.settings.project_url = 'https://<ref>.supabase.co';
@@ -150,7 +187,26 @@ WhatsApp fires only at MEDIUM or above.
 Every report is stored, which is what builds the baseline the rolling medians
 depend on.
 
-Re-run a missed night by hand:
+### Late data revises the day it belongs to
+
+A tablet that is offline past 21:30 — the exact case offline-first exists for —
+pushes its sales the next morning, still carrying the previous day's
+`created_at_local`. So before reporting today, the job looks back 14 days for
+any date whose sales reached the server *after* that date's report was written,
+or that has sales and no report at all, and reconciles those days again, oldest
+first.
+
+Without this, a day reported while the tablet was offline stayed wrong forever
+— and because stored reports are the baseline, the wrong number would teach the
+volume checks the wrong normal.
+
+Corrections are not silent: when an earlier day's figures move, today's email
+carries a short "Revised earlier days" table showing what the owner was told
+against what the day actually was. It stays in the one daily email — a
+corrected Tuesday is not worth its own alert.
+
+A manual `?date=` run reconciles only that day and skips the look-back, so
+re-running one night by hand cannot quietly rewrite a fortnight of history:
 
 ```bash
 curl -X POST "https://<ref>.supabase.co/functions/v1/nightly-reconciliation?date=2026-03-12" \

@@ -1,0 +1,18 @@
+# Cloudflare Workers deployment for the tablet app.
+#
+# Assets-only: there is no server-side Worker code. The PWA is a static bundle
+# that talks directly to Supabase, so Cloudflare is only serving files.
+#
+# Build: `npm run build` (Cloudflare runs this), output in ./dist
+# Deploy: `npx wrangler deploy`
+
+name = "barbering-shop"
+compatibility_date = "2025-01-01"
+
+[assets]
+directory = "./dist"
+
+# The app is a single-page app: /today and /cash-count are client-side routes
+# with no file behind them. Without this, a refresh on either — or the manager
+# reopening the installed app on a sub-route — would 404.
+not_found_handling = "single-page-application"

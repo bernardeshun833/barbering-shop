@@ -1,0 +1,34 @@
+name: Deploy edge functions
+
+# Pushes the Supabase edge functions without needing the CLI on your laptop.
+# Run it from the Actions tab.
+#
+# Secrets required:
+#   SUPABASE_ACCESS_TOKEN  — Supabase dashboard → Account → Access Tokens
+#   SUPABASE_PROJECT_REF   — the ref in your project URL
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy nightly-reconciliation
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy nightly-reconciliation --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+
+      # momo-sync is deployed too, but stays dormant: its cron job is not
+      # scheduled while the shop is cash-only (migration 0007), and it exits
+      # immediately if no MoMo credentials are set.
+      - name: Deploy momo-sync
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy momo-sync --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"

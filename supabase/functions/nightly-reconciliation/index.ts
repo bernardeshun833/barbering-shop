@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import {
   computeDeviceGaps,
+  datesNeedingRevision,
   reconcile,
   type Baseline,
   type BusinessDateReport,
@@ -9,8 +10,16 @@ import {
   type PosTransaction,
   type ReconciliationSettings
 } from "../_shared/reconciliation.ts";
-import { emailHtml, emailSubject, whatsappAlert } from "../_shared/report.ts";
+import { emailHtml, emailSubject, whatsappAlert, type Revision } from "../_shared/report.ts";
 import { sendEmail, sendWhatsApp } from "../_shared/notify.ts";
+
+/**
+ * How far back to look for days whose data arrived after their report was
+ * written. Generous on purpose: a tablet can be off the network for a week in
+ * a place with unreliable connectivity, and the scan is one extra query on a
+ * table this shop adds a few dozen rows a day to.
+ */
+const REVISION_WINDOW_DAYS = 14;
 
 Deno.serve(async (req) => {
   const supabase = createClient(
@@ -21,18 +30,102 @@ Deno.serve(async (req) => {
   // Cron fires at 21:30 local, so "today" is the business day that just
   // closed. An explicit ?date= lets a missed night be re-run by hand.
   const url = new URL(req.url);
-  const businessDate = url.searchParams.get("date") ?? new Date().toISOString().slice(0, 10);
+  const explicitDate = url.searchParams.get("date");
+  const businessDate = explicitDate ?? new Date().toISOString().slice(0, 10);
 
   try {
+    // A manual ?date= run means "reconcile exactly that day" — don't let it
+    // quietly rewrite a fortnight of history as a side effect.
+    const revisions = explicitDate ? [] : await reviseStaleDates(supabase, businessDate);
+
     const report = await runReconciliation(supabase, businessDate);
-    const delivery = await deliver(supabase, report);
-    return Response.json({ ok: true, severity: report.severity, delivery });
+    const delivery = await deliver(supabase, report, revisions);
+
+    return Response.json({
+      ok: true,
+      severity: report.severity,
+      revised: revisions.map((r) => r.business_date),
+      delivery
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("nightly-reconciliation failed", message);
     return Response.json({ ok: false, error: message }, { status: 500 });
   }
 });
+
+/**
+ * Re-reconcile any earlier day whose data has changed since it was reported,
+ * oldest first so each rebuild sees corrected history behind it. Returns only
+ * the days whose numbers actually moved — a re-run that lands on the same
+ * figures is not news, and the owner should not be told a day was "revised"
+ * when nothing about it changed.
+ */
+async function reviseStaleDates(
+  supabase: SupabaseClient,
+  businessDate: string
+): Promise<Revision[]> {
+  const windowStart = new Date(
+    Date.parse(`${businessDate}T00:00:00Z`) - REVISION_WINDOW_DAYS * 24 * 60 * 60 * 1000
+  )
+    .toISOString()
+    .slice(0, 10);
+
+  const [reportsRes, txnRes] = await Promise.all([
+    supabase
+      .from("reconciliation_reports")
+      .select("business_date, created_at, revenue_total, txn_count, severity")
+      .gte("business_date", windowStart)
+      .lt("business_date", businessDate),
+    supabase
+      .from("transactions")
+      .select("created_at_local, synced_at")
+      .gte("created_at_local", `${windowStart}T00:00:00Z`)
+      .lt("created_at_local", `${businessDate}T00:00:00Z`)
+  ]);
+
+  if (reportsRes.error) throw new Error(`revision scan reports: ${reportsRes.error.message}`);
+  if (txnRes.error) throw new Error(`revision scan transactions: ${txnRes.error.message}`);
+
+  const previous = new Map(
+    (reportsRes.data ?? []).map((r) => [
+      r.business_date as string,
+      {
+        revenue_total: Number(r.revenue_total),
+        txn_count: Number(r.txn_count),
+        severity: r.severity as BusinessDateReport["severity"]
+      }
+    ])
+  );
+
+  const stale = datesNeedingRevision(reportsRes.data ?? [], txnRes.data ?? []);
+  const revisions: Revision[] = [];
+
+  for (const date of stale) {
+    const before = previous.get(date) ?? null;
+    const after = await runReconciliation(supabase, date);
+
+    const changed =
+      before === null ||
+      before.revenue_total !== after.revenue_total ||
+      before.txn_count !== after.txn_count ||
+      before.severity !== after.severity;
+
+    if (changed) {
+      revisions.push({
+        business_date: date,
+        previous: before,
+        current: {
+          revenue_total: after.revenue_total,
+          txn_count: after.txn_count,
+          severity: after.severity
+        }
+      });
+    }
+  }
+
+  return revisions;
+}
 
 async function runReconciliation(
   supabase: SupabaseClient,
@@ -193,7 +286,11 @@ async function persist(
   if (error) throw new Error(`store report: ${error.message}`);
 }
 
-async function deliver(supabase: SupabaseClient, report: BusinessDateReport) {
+async function deliver(
+  supabase: SupabaseClient,
+  report: BusinessDateReport,
+  revisions: Revision[]
+) {
   const { data: settings } = await supabase
     .from("shop_settings")
     .select("owner_email, owner_whatsapp")
@@ -209,7 +306,7 @@ async function deliver(supabase: SupabaseClient, report: BusinessDateReport) {
     ? await sendEmail({
         to: settings.owner_email,
         subject: emailSubject(report),
-        html: emailHtml(report, barberNames)
+        html: emailHtml(report, barberNames, revisions)
       })
     : { ok: false, skipped: "owner_email not set" };
 
