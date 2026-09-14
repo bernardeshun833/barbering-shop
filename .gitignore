@@ -11,3 +11,6 @@ supabase/.temp/
 
 # TS composite build info
 *.tsbuildinfo
+
+# Vite writes these while loading the config
+vite.config.ts.timestamp-*

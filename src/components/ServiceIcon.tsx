@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 const props = {
   fill: "none",
   stroke: "currentColor",
@@ -68,14 +70,22 @@ const Clipper = () => (
  * Matched on the service name rather than stored per row, so adding a service
  * in the database needs no code change — an unrecognised one simply gets the
  * scissors. Order matters: "haircut + beard" must be tested before "haircut".
+ *
+ * `file` is the shop's own artwork in public/icons; the drawn `icon` is the
+ * fallback, used for services the shop has no artwork for and if the files
+ * are ever missing.
  */
-const RULES: { match: RegExp; icon: () => JSX.Element }[] = [
-  { match: /beard.*(cut|\+)|(\+|and).*beard|haircut.*beard/i, icon: ScissorsComb },
-  { match: /beard|moustache/i, icon: Beard },
-  { match: /shave|razor|hot towel/i, icon: Razor },
-  { match: /kid|child|boy/i, icon: Kid },
-  { match: /line.?up|edge|shape|clipper|fade/i, icon: Clipper },
-  { match: /.*/, icon: Scissors }
+const RULES: { match: RegExp; icon: () => JSX.Element; file: string }[] = [
+  {
+    match: /beard.*(cut|\+)|(\+|and).*beard|haircut.*beard/i,
+    icon: ScissorsComb,
+    file: "haircut-beard"
+  },
+  { match: /beard|moustache/i, icon: Beard, file: "beard-trim" },
+  { match: /shave|razor|hot towel/i, icon: Razor, file: "shave" },
+  { match: /kid|child|boy/i, icon: Kid, file: "kids-cut" },
+  { match: /line.?up|edge|shape|clipper|fade/i, icon: Clipper, file: "line-up" },
+  { match: /.*/, icon: Scissors, file: "haircut" }
 ];
 
 export default function ServiceIcon({
@@ -85,7 +95,21 @@ export default function ServiceIcon({
   name: string;
   className?: string;
 }) {
-  const Icon = RULES.find((r) => r.match.test(name))!.icon;
+  const [artworkFailed, setArtworkFailed] = useState(false);
+  const rule = RULES.find((r) => r.match.test(name))!;
+
+  if (!artworkFailed) {
+    return (
+      <img
+        src={`icons/${rule.file}.png`}
+        alt=""
+        className={`${className} object-contain`}
+        onError={() => setArtworkFailed(true)}
+      />
+    );
+  }
+
+  const Icon = rule.icon;
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
       <Icon />

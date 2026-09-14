@@ -31,10 +31,12 @@ export default function TodayLog() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-4">
-      <div className="flex items-baseline justify-between">
+      {/* Wraps rather than collides: the date and the running total both grow,
+          and on a phone they will not share a line. */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h1 className="text-xl font-semibold">Today · {shiftDate}</h1>
-        <p className="text-lg">
-          {txns.length} entries · GHS {total.toFixed(2)}
+        <p className="text-lg text-cream/80">
+          {txns.length} {txns.length === 1 ? "entry" : "entries"} · GHS {total.toFixed(2)}
         </p>
       </div>
 
@@ -57,7 +59,7 @@ export default function TodayLog() {
                   wasVoided ? "opacity-50" : ""
                 }`}
               >
-                <div>
+                <div className="min-w-0">
                   <p className="font-medium">
                     {serviceName(txn.service_id)} · {barberName(txn.barber_id)}
                     {isCorrection && (
@@ -80,8 +82,10 @@ export default function TodayLog() {
                     {txn.sync_state === "synced" ? "synced" : "on this tablet only"}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-lg">GHS {txn.amount.toFixed(2)}</span>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className="whitespace-nowrap text-lg">
+                    GHS {txn.amount.toFixed(2)}
+                  </span>
                   {!isCorrection && !wasVoided && (
                     <button
                       type="button"

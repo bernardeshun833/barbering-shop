@@ -24,3 +24,16 @@ Notes:
   extra megabyte is a slower first load on a bad connection in Kumasi.
 - These files are the shop's own assets. Do not drop in stock photography that
   has not been licensed for the purpose.
+
+## How the current files were produced
+
+`scripts/prep-brand-assets.py` turns the shop's originals into what the app
+ships: it keys the black background off the logo, cuts the six service icons
+out of the tile grid and trims each to its own bounds, resizes the
+photographs, and quantises everything to a palette.
+
+The originals are not in the repository. To regenerate, point the paths at
+the top of that script at them and run it — Pillow and numpy required.
+
+Total weight of the brand assets is kept near 300KB on purpose; the tablet
+precaches all of them for offline use.
