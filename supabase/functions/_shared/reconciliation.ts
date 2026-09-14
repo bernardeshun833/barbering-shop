@@ -64,6 +64,8 @@ export interface ReconciliationSettings {
   opening_float: number;
   open_time: string;
   close_time: string;
+  /** False while the shop is cash-only; Check A is skipped rather than faked. */
+  momo_enabled: boolean;
   digital_variance_pct_threshold: number;
   cash_variance_threshold: number;
   volume_drop_pct_threshold: number;
@@ -87,6 +89,7 @@ export interface ReconciliationInput {
 export type FlagKind =
   | "unmatched_momo"
   | "unmatched_pos_digital"
+  | "digital_without_momo_feed"
   | "cash_variance"
   | "missing_cash_count"
   | "volume_drop"
@@ -114,6 +117,8 @@ export interface BarberBreakdown {
 export interface BusinessDateReport {
   business_date: string;
   severity: Severity;
+  /** False on a cash-only day: Check A did not run, it did not pass. */
+  momo_checked: boolean;
   revenue_total: number;
   txn_count: number;
   cash_total: number;
@@ -225,7 +230,34 @@ export function reconcile(input: ReconciliationInput): BusinessDateReport {
 
   const windowMs = settings.momo_match_window_minutes * 60 * 1000;
 
-  for (const payment of momoPayments) {
+  // While the shop is cash-only there is no MoMo feed to compare against, so
+  // Check A is skipped outright. Running it anyway would flag every digital
+  // row as money that never arrived — technically true, useless nightly, and
+  // the fastest way to teach the owner to ignore the report.
+  //
+  // Skipping is not silence: if a digital sale gets logged, or money turns up
+  // from a feed nobody configured, the settings no longer describe the
+  // business and that is worth one clear flag — one, not one per row.
+  if (!settings.momo_enabled && (candidates.length > 0 || momoPayments.length > 0)) {
+    const total = round2(candidates.reduce((s, t) => s + t.amount, 0));
+    flag({
+      kind: "digital_without_momo_feed",
+      severity: "MEDIUM",
+      message:
+        candidates.length > 0
+          ? `${candidates.length} sale(s) totalling GHS ${total.toFixed(
+              2
+            )} were logged as digital, but the shop is set to cash only — nothing can check whether that money arrived`
+          : `MoMo money arrived for a shop set to cash only — turn on momo_enabled so it can be reconciled`,
+      details: {
+        digital_transactions: candidates.length,
+        digital_total: total,
+        momo_payments: momoPayments.length
+      }
+    });
+  }
+
+  for (const payment of settings.momo_enabled ? momoPayments : []) {
     const paymentTime = new Date(payment.timestamp).getTime();
 
     const eligible = candidates
@@ -261,7 +293,10 @@ export function reconcile(input: ReconciliationInput): BusinessDateReport {
     }
   }
 
-  const unmatchedPosDigital = candidates.filter((t) => !matchedPosIds.has(t.id));
+  const unmatchedPosDigital = settings.momo_enabled
+    ? candidates.filter((t) => !matchedPosIds.has(t.id))
+    : [];
+
   if (unmatchedPosDigital.length > 0) {
     const total = round2(unmatchedPosDigital.reduce((s, t) => s + t.amount, 0));
     flag({
@@ -274,7 +309,10 @@ export function reconcile(input: ReconciliationInput): BusinessDateReport {
     });
   }
 
-  if (Math.abs(digitalVariancePct) > settings.digital_variance_pct_threshold) {
+  if (
+    settings.momo_enabled &&
+    Math.abs(digitalVariancePct) > settings.digital_variance_pct_threshold
+  ) {
     severity = maxSeverity(severity, "HIGH");
   }
 
@@ -401,6 +439,7 @@ export function reconcile(input: ReconciliationInput): BusinessDateReport {
   return {
     business_date: input.businessDate,
     severity,
+    momo_checked: settings.momo_enabled,
     revenue_total: revenueTotal,
     txn_count: txnCount,
     cash_total: posCashTotal,

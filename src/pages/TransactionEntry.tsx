@@ -9,16 +9,25 @@ import type { Barber, PaymentMethod, Service } from "../types";
 
 type Step = "barber" | "service" | "payment" | "pin" | "done";
 
-const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
-  { value: "cash", label: "Cash" },
-  { value: "momo", label: "MoMo" },
-  { value: "qr", label: "QR" },
-  { value: "card", label: "Card" }
+const PAYMENT_METHODS: { value: PaymentMethod; label: string; digital: boolean }[] = [
+  { value: "cash", label: "Cash", digital: false },
+  { value: "momo", label: "MoMo", digital: true },
+  { value: "qr", label: "QR", digital: true },
+  { value: "card", label: "Card", digital: true }
 ];
 
 export default function TransactionEntry() {
   const barbers = useLiveQuery(() => db.barbers.toArray(), [], [] as Barber[]);
   const services = useLiveQuery(() => db.services.toArray(), [], [] as Service[]);
+  const settings = useLiveQuery(() => db.settings.get("current"), []);
+
+  // Cash only until MoMo is switched on. The digital tiles are hidden rather
+  // than removed: turning them on is a database flag and the next sync, with
+  // no new build. Defaults to cash-only when settings have not synced yet, so
+  // a fresh tablet cannot offer a payment method the shop cannot reconcile.
+  const paymentMethods = PAYMENT_METHODS.filter(
+    (m) => !m.digital || settings?.momo_enabled === true
+  );
 
   const [step, setStep] = useState<Step>("barber");
   const [barber, setBarber] = useState<Barber | null>(null);
@@ -98,7 +107,9 @@ export default function TransactionEntry() {
           if (step === "payment") setStep("service");
           if (step === "pin") {
             setPin("");
-            setStep("payment");
+            // Skip the payment step on the way back too, when it was skipped
+            // on the way in.
+            setStep(paymentMethods.length === 1 ? "service" : "payment");
           }
         }}
       />
@@ -130,7 +141,15 @@ export default function TransactionEntry() {
               className="tile flex-col gap-1"
               onClick={() => {
                 setService(s);
-                setStep("payment");
+                // With only one payment method there is nothing to choose;
+                // making the manager tap "Cash" every time is a tap that
+                // teaches them to tap without reading.
+                if (paymentMethods.length === 1) {
+                  setMethod(paymentMethods[0].value);
+                  setStep("pin");
+                } else {
+                  setStep("payment");
+                }
               }}
             >
               <span>{s.name}</span>
@@ -142,7 +161,7 @@ export default function TransactionEntry() {
 
       {step === "payment" && (
         <Grid>
-          {PAYMENT_METHODS.map((m) => (
+          {paymentMethods.map((m) => (
             <button
               key={m.value}
               type="button"

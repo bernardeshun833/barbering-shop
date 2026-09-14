@@ -41,6 +41,29 @@ behind a spinner.
 
 Read `docs/security.md` for what these actually guarantee — and what they don't.
 
+## Cash-only mode
+
+`shop_settings.momo_enabled` defaults to **false**, so the shop can run before
+mobile money is live and switch it on later with one flag:
+
+- the tablet offers cash only and **skips the payment step entirely** — a screen
+  that asks "how did they pay?" with one possible answer teaches the manager to
+  tap without reading. It defaults to cash-only until settings have synced, so a
+  fresh tablet cannot offer a method the shop cannot reconcile;
+- Check A is **skipped, not passed**. The report says "cash only — not checked"
+  rather than showing a variance against a feed that does not exist;
+- if a digital sale is logged anyway, or MoMo money arrives from a feed nobody
+  configured, that is one MEDIUM flag saying the settings no longer describe the
+  business — one flag, not one per row.
+
+Turning it on is a database change and the next sync, with no new build:
+
+```sql
+update shop_settings set momo_enabled = true;
+```
+
+`tests/cash-only.test.ts` covers the switch in both positions.
+
 ## Running it locally
 
 ```bash
@@ -108,6 +131,7 @@ do not depend on each other:
   data comes from MTN, not from staff. Each MoMo payment is matched to a digital
   sale on exact amount within a 15-minute window; where several sales qualify,
   the closest in time wins. Unmatched in either direction is HIGH.
+  *Skipped while `momo_enabled` is false — see Cash-only mode above.*
 - **Check B — cash declared vs cash counted.** `expected_cash` is recomputed
   server-side from POS rows, so the figure shown on the tablet cannot influence
   it. Over the threshold is MEDIUM; a missing count is also MEDIUM.

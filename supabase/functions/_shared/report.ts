@@ -16,6 +16,16 @@ const SEVERITY_COLOR: Record<Severity, string> = {
 
 const ghs = (n: number) => `GHS ${n.toFixed(2)}`;
 
+/**
+ * Reports stored before cash-only mode existed have no momo_checked field, and
+ * they were all produced with Check A running. Treating `undefined` as true
+ * keeps those historical reports rendering the way they did when they were
+ * sent, rather than retroactively claiming MoMo was never checked.
+ */
+function momoWasChecked(report: BusinessDateReport): boolean {
+  return report.momo_checked !== false;
+}
+
 export function emailSubject(report: BusinessDateReport): string {
   const prefix = report.severity === "NONE" ? "" : `[${SEVERITY_LABEL[report.severity]}] `;
   return `${prefix}Shop report ${report.business_date} — ${ghs(report.revenue_total)}, ${
@@ -34,7 +44,11 @@ export function emailHtml(
 ): string {
   const flagRows =
     report.flags.length === 0
-      ? `<p style="margin:0;color:#059669">Nothing flagged. Cash, MoMo and the POS all agree.</p>`
+      ? `<p style="margin:0;color:#059669">Nothing flagged. ${
+          momoWasChecked(report)
+            ? "Cash, MoMo and the POS all agree."
+            : "The drawer matches what the POS recorded."
+        }</p>`
       : report.flags
           .map(
             (f) => `
@@ -84,11 +98,15 @@ export function emailHtml(
           report.digital_total
         )} <span style="color:#64748b">(${report.cash_share_pct.toFixed(0)}% cash)</span></td></tr>
         ${cashRow}
-        <tr><td style="padding:6px 0">Digital logged vs MoMo received</td><td style="padding:6px 0;text-align:right">${ghs(
-          report.digital_total
-        )} vs ${ghs(report.momo_actual_total)} <strong>(${report.digital_variance >= 0 ? "+" : ""}${report.digital_variance.toFixed(
-          2
-        )})</strong></td></tr>
+        ${
+          momoWasChecked(report)
+            ? `<tr><td style="padding:6px 0">Digital logged vs MoMo received</td><td style="padding:6px 0;text-align:right">${ghs(
+                report.digital_total
+              )} vs ${ghs(report.momo_actual_total)} <strong>(${
+                report.digital_variance >= 0 ? "+" : ""
+              }${report.digital_variance.toFixed(2)})</strong></td></tr>`
+            : `<tr><td style="padding:6px 0">Mobile money</td><td style="padding:6px 0;text-align:right;color:#64748b">cash only — not checked</td></tr>`
+        }
       </table>
 
       <h3 style="margin:20px 0 8px">Flags</h3>

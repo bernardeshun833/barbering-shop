@@ -24,6 +24,7 @@ export interface ShopSettings {
   open_time: string;
   close_time: string;
   timezone: string;
+  momo_enabled: boolean;
 }
 
 /** A transaction as it lives in the local queue before it reaches Postgres. */

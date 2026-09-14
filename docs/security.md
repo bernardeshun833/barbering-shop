@@ -43,6 +43,13 @@ sale is logged as MoMo and no MoMo money arrived — or money arrived with no
 sale logged — the numbers disagree and the report says so. This is the check
 that is hard to defeat from inside the shop.
 
+Worth being blunt about: while `momo_enabled` is false this check is **not
+running at all**, and the report says "cash only — not checked" rather than
+implying otherwise. A cash-only shop is running on the weaker checks below,
+which is a real reduction in coverage — not a configuration detail. It is also
+the honest state of affairs until the MoMo merchant account clears, and
+pretending otherwise in the nightly report would be worse than saying it.
+
 **Moderate:** cash against the physical count, recomputed server-side from POS
 data so a wrong `expected` typed on the tablet cannot paper over a variance.
 Defeated by simply not logging the sale and pocketing the cash — the drawer
