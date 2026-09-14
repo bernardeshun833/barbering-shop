@@ -21,7 +21,7 @@ export default function NumPad({ value, onChange, maxLength = 4 }: NumPadProps) 
           key={key}
           type="button"
           onClick={() => press(key)}
-          className="tile h-20 text-2xl"
+          className={`key ${key === "clear" || key === "back" ? "text-gold-300" : ""}`}
         >
           {key === "back" ? "⌫" : key === "clear" ? "C" : key}
         </button>

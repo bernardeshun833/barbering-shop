@@ -5,8 +5,8 @@
 import { deflateSync } from "node:zlib";
 import { writeFileSync } from "node:fs";
 
-const BG = [17, 24, 39]; // gray-900, matches theme_color
-const FG = [52, 211, 153]; // emerald-400
+const BG = [7, 8, 10]; // ink-900, matches theme_color
+const FG = [232, 200, 138]; // gold-300
 
 function crc32(buf) {
   let c;
@@ -78,9 +78,16 @@ for (const size of [192, 512]) {
   console.log(`public/pwa-${size}.png`);
 }
 
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#111827"/>
-  <path d="M9 9 L23 23 M23 9 L9 23" stroke="#34d399" stroke-width="2.5" stroke-linecap="round"/>
+// Crown over crossed scissors, matching src/components/Brand.tsx.
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <rect width="48" height="48" rx="10" fill="#07080A"/>
+  <g fill="none" stroke="#E8C88A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 13.5 L17.5 17 L24 10.5 L30.5 17 L34 13.5 L32.5 21 L15.5 21 Z"/>
+    <path d="M17 25.5 L33 40"/>
+    <path d="M31 25.5 L15 40"/>
+    <circle cx="16.5" cy="28" r="3.1"/>
+    <circle cx="31.5" cy="28" r="3.1"/>
+  </g>
 </svg>
 `;
 writeFileSync(new URL("../public/favicon.svg", import.meta.url), svg);

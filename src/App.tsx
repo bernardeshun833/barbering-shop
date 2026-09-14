@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
+import Brand from "./components/Brand";
 import LockScreen from "./components/LockScreen";
 import SyncStatusBar from "./components/SyncStatusBar";
 import { useSyncStatus } from "./hooks/useSyncStatus";
@@ -28,15 +29,15 @@ function DemoBanner() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="bg-amber-500 px-4 py-2 text-sm text-amber-950">
+    <div className="border-b border-amber-400/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
       <div className="flex items-center justify-between gap-3">
         <span>
-          <strong>Demo.</strong> No shop database connected — everything stays in
-          this browser.
+          <strong className="text-amber-100">Demo.</strong> No shop database
+          connected — everything stays in this browser.
         </span>
         <button
           type="button"
-          className="shrink-0 rounded-lg border border-amber-900/40 px-3 py-1 font-medium"
+          className="shrink-0 rounded-lg border border-amber-400/40 px-3 py-1 font-medium"
           onClick={() => setOpen((v) => !v)}
         >
           {open ? "Hide" : "PINs"}
@@ -44,17 +45,17 @@ function DemoBanner() {
       </div>
 
       {open && (
-        <div className="mt-2 border-t border-amber-900/25 pt-2">
+        <div className="mt-2 border-t border-amber-400/20 pt-2">
           <ul className="flex flex-wrap gap-x-4 gap-y-1">
             {Object.entries(DEMO_PINS).map(([name, pin]) => (
               <li key={name}>
-                {name}: <strong>{pin}</strong>
+                {name}: <strong className="text-amber-100">{pin}</strong>
               </li>
             ))}
           </ul>
           <button
             type="button"
-            className="mt-2 rounded-lg border border-amber-900/40 px-3 py-1 font-medium"
+            className="mt-2 rounded-lg border border-amber-400/40 px-3 py-1 font-medium"
             onClick={() => {
               void resetDemo().then(() => window.location.reload());
             }}
@@ -112,7 +113,7 @@ export default function App() {
 
   if (!ready) {
     return (
-      <div className="flex h-full items-center justify-center text-gray-400">Loading…</div>
+      <div className="flex h-full items-center justify-center text-cream/55">Loading…</div>
     );
   }
 
@@ -132,17 +133,21 @@ export default function App() {
       {DEMO_MODE && <DemoBanner />}
       <SyncStatusBar status={status} />
 
-      <nav className="flex gap-1 border-b border-gray-800 px-2">
+      <header className="flex items-center justify-between px-4 pb-1 pt-3">
+        <Brand />
+      </header>
+
+      <nav className="flex items-stretch gap-1 border-b border-gold-600/20 px-2">
         {TABS.map((tab) => (
           <NavLink
             key={tab.to}
             to={tab.to}
             end={tab.to === "/"}
             className={({ isActive }) =>
-              `min-h-touch flex-1 px-4 py-3 text-center text-base font-medium ${
+              `flex min-h-touch flex-1 items-center justify-center px-3 py-3 text-center text-sm font-medium leading-tight ${
                 isActive
-                  ? "border-b-2 border-emerald-400 text-emerald-300"
-                  : "text-gray-400"
+                  ? "border-b-2 border-gold-400 text-gold-200"
+                  : "text-cream/45"
               }`
             }
           >
@@ -153,7 +158,7 @@ export default function App() {
         {soleBarber && (
           <button
             type="button"
-            className="min-h-touch px-4 text-sm font-medium text-gray-500"
+            className="min-h-touch px-3 text-sm font-medium text-cream/45"
             onClick={() => setUnlocked(false)}
           >
             Lock

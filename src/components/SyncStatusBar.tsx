@@ -21,7 +21,7 @@ export default function SyncStatusBar({ status }: { status: SyncStatus }) {
   // about that.
   if (DEMO_MODE) {
     return (
-      <div className="flex items-center justify-between bg-gray-800 px-4 py-2 text-sm text-gray-300">
+      <div className="flex items-center justify-between bg-ink-700 px-4 py-2 text-sm text-cream/70">
         <span className="font-medium">
           {status.online ? "Demo mode" : "Offline — sales are being saved on this device"}
         </span>
@@ -39,7 +39,7 @@ export default function SyncStatusBar({ status }: { status: SyncStatus }) {
     ? "bg-amber-900/60 text-amber-100"
     : stale || status.pending > 0
       ? "bg-sky-900/60 text-sky-100"
-      : "bg-gray-800 text-gray-300";
+      : "bg-ink-700 text-cream/70";
 
   return (
     <div className={`flex items-center justify-between px-4 py-2 text-sm ${tone}`}>

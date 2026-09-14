@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import NumPad from "../components/NumPad";
+import ServiceIcon from "../components/ServiceIcon";
 import { db, queueTransaction } from "../lib/db";
 import { getDeviceId } from "../lib/device";
 import { verifyPin } from "../lib/pin";
@@ -135,9 +136,9 @@ export default function TransactionEntry() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
         <div className="text-center">
-          <p className="text-5xl">✓</p>
+          <p className="text-5xl text-gold-300">✓</p>
           <p className="mt-4 text-2xl font-semibold">Sale recorded</p>
-          <p className="mt-2 text-gray-400">
+          <p className="mt-2 text-cream/55">
             {service?.name} · GHS {service?.price.toFixed(2)} · {method} ·{" "}
             {activeBarber?.name}
           </p>
@@ -195,11 +196,12 @@ export default function TransactionEntry() {
             <button
               key={s.id}
               type="button"
-              className="tile flex-col gap-1"
+              className="tile flex-col gap-2 py-6"
               onClick={() => afterService(s)}
             >
-              <span>{s.name}</span>
-              <span className="text-sm text-gray-400">GHS {s.price.toFixed(2)}</span>
+              <ServiceIcon name={s.name} className="h-8 w-8 text-gold-300" />
+              <span className="leading-tight">{s.name}</span>
+              <span className="text-sm text-gold-400/80">GHS {s.price.toFixed(2)}</span>
             </button>
           ))}
         </Grid>
@@ -230,12 +232,12 @@ export default function TransactionEntry() {
               <span
                 key={i}
                 className={`h-4 w-4 rounded-full ${
-                  i < pin.length ? "bg-emerald-400" : "bg-gray-700"
+                  i < pin.length ? "bg-gold-300" : "bg-ink-600"
                 }`}
               />
             ))}
           </div>
-          {error && <p className="text-center text-amber-300">{error}</p>}
+          {error && <p className="text-center text-gold-200">{error}</p>}
           <NumPad value={pin} onChange={setPin} />
           <button
             type="button"
@@ -286,7 +288,7 @@ function StepHeader({
       )}
       <div>
         <h1 className="text-xl font-semibold">{titles[step as Exclude<Step, "done">]}</h1>
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-cream/55">
           {[barber?.name, service?.name, method].filter(Boolean).join(" · ") || "New sale"}
         </p>
       </div>

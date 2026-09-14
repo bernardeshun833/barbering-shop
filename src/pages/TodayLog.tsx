@@ -38,7 +38,7 @@ export default function TodayLog() {
       </div>
 
       {txns.length === 0 && (
-        <p className="rounded-xl bg-gray-800 p-6 text-center text-gray-400">
+        <p className="rounded-xl bg-ink-700 p-6 text-center text-cream/55">
           No sales logged yet today.
         </p>
       )}
@@ -52,7 +52,7 @@ export default function TodayLog() {
             return (
               <li
                 key={txn.id}
-                className={`flex items-center justify-between rounded-xl border border-gray-700 bg-gray-800 p-3 ${
+                className={`flex items-center justify-between rounded-xl border border-gold-600/25 bg-ink-700 p-3 ${
                   wasVoided ? "opacity-50" : ""
                 }`}
               >
@@ -65,12 +65,12 @@ export default function TodayLog() {
                       </span>
                     )}
                     {wasVoided && (
-                      <span className="ml-2 rounded bg-gray-700 px-2 py-0.5 text-xs">
+                      <span className="ml-2 rounded bg-ink-600 px-2 py-0.5 text-xs">
                         voided
                       </span>
                     )}
                   </p>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-cream/55">
                     {new Date(txn.created_at_local).toLocaleTimeString("en-GB", {
                       hour: "2-digit",
                       minute: "2-digit"
@@ -155,17 +155,17 @@ function VoidDialog({
 
   return (
     <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/70 p-4">
-      <div className="flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-gray-900 p-5">
+      <div className="flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-ink-800 p-5">
         <div>
           <h2 className="text-lg font-semibold">Void GHS {txn.amount.toFixed(2)}?</h2>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="mt-1 text-sm text-cream/55">
             This adds a correction entry. The original stays in the record.
           </p>
         </div>
         <p className="text-sm">
           {barber ? `${barber.name}, enter your PIN` : "Barber not found on this device"}
         </p>
-        {error && <p className="text-amber-300">{error}</p>}
+        {error && <p className="text-gold-200">{error}</p>}
         <NumPad value={pin} onChange={setPin} />
         <div className="flex gap-3">
           <button type="button" className="btn-secondary flex-1" onClick={onClose}>

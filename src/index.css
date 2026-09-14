@@ -10,7 +10,7 @@
   }
 
   body {
-    @apply bg-gray-900 text-gray-100 antialiased;
+    @apply bg-ink-900 text-cream antialiased;
     /* The tablet is a dedicated POS device — kill the behaviours that make a
        browser feel like a browser. */
     -webkit-touch-callout: none;
@@ -18,26 +18,62 @@
     user-select: none;
     overscroll-behavior: none;
   }
+
+  input,
+  textarea {
+    @apply select-text;
+  }
 }
 
 @layer components {
+  /* Cards and tiles: a hairline of warm gold rather than a grey border, which
+     is most of what separates this from a generic dark theme. */
+  .panel {
+    @apply rounded-2xl border border-gold-600/25 bg-ink-700/80;
+  }
+
   .tile {
-    @apply flex min-h-touch items-center justify-center rounded-xl border border-gray-700
-           bg-gray-800 px-4 py-5 text-center text-lg font-medium
-           transition-colors active:bg-gray-700;
+    @apply flex min-h-touch items-center justify-center rounded-2xl border
+           border-gold-600/25 bg-ink-700 px-4 py-5 text-center text-lg font-medium
+           text-cream transition-colors active:border-gold-400/60 active:bg-ink-600;
   }
 
   .tile-selected {
-    @apply border-emerald-400 bg-emerald-900/40 text-emerald-100;
+    @apply border-gold-400 bg-gold-500/10 text-gold-200;
   }
 
   .btn-primary {
-    @apply flex min-h-touch w-full items-center justify-center rounded-xl bg-emerald-600
-           px-6 text-xl font-semibold text-white disabled:bg-gray-700 disabled:text-gray-500;
+    @apply flex min-h-touch w-full items-center justify-center gap-2 rounded-2xl
+           bg-gradient-to-b from-gold-300 to-gold-500 px-6 text-lg font-semibold
+           text-ink-900 shadow-gold transition-opacity
+           active:opacity-90
+           disabled:from-ink-600 disabled:to-ink-600 disabled:text-ink-500
+           disabled:shadow-none;
   }
 
   .btn-secondary {
-    @apply flex min-h-touch items-center justify-center rounded-xl border border-gray-600
-           px-6 text-lg font-medium text-gray-200;
+    @apply flex min-h-touch items-center justify-center rounded-2xl border
+           border-gold-600/35 px-6 text-lg font-medium text-gold-200
+           active:bg-gold-500/10;
+  }
+
+  .key {
+    @apply flex h-16 items-center justify-center rounded-2xl border
+           border-gold-600/20 bg-ink-700 text-2xl font-medium text-cream
+           transition-colors active:border-gold-400/50 active:bg-ink-600;
+  }
+
+  .field {
+    @apply flex min-h-touch w-full items-center gap-3 rounded-2xl border
+           border-gold-600/25 bg-ink-700 px-4;
+  }
+
+  .field input,
+  .field textarea {
+    @apply w-full bg-transparent text-cream placeholder:text-cream/35 focus:outline-none;
+  }
+
+  .wordmark {
+    @apply font-display tracking-wide text-gold-200;
   }
 }

@@ -24,11 +24,11 @@ export default defineConfig({
         // losing offline mode, the whole point of it.
         start_url: base,
         scope: base,
-        name: "Kumasi Barbershop POS",
-        short_name: "BarberPOS",
+        name: "Effé Barbering Shop",
+        short_name: "Effé",
         description: "Offline-first point of sale for the shop floor",
-        theme_color: "#111827",
-        background_color: "#111827",
+        theme_color: "#07080A",
+        background_color: "#07080A",
         display: "standalone",
         orientation: "portrait",
         icons: [
