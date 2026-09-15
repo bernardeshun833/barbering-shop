@@ -136,13 +136,15 @@ supabase secrets set \
 supabase functions deploy nightly-reconciliation
 ```
 
-Migration 0005 schedules the cron jobs with pg_cron and 0007 unschedules
-`momo-sync` again, leaving only the nightly job running. Before they run, set
-the two database settings they read:
+Migration 0005 schedules the cron jobs with pg_cron, 0007 unschedules
+`momo-sync` again, and 0008 points the nightly job at Vault for its URL and
+key. Create those two secrets once — hosted Supabase does not allow the
+`alter database ... set` that 0005 originally assumed, so Vault is where these
+live:
 
 ```sql
-alter database postgres set app.settings.project_url = 'https://<ref>.supabase.co';
-alter database postgres set app.settings.service_role_key = '<service-role-key>';
+select vault.create_secret('https://<ref>.supabase.co', 'project_url');
+select vault.create_secret('<service-role-key>', 'service_role_key');
 ```
 
 Then set the owner's contact details and any threshold you want to tune:

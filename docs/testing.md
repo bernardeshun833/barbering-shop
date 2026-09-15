@@ -49,13 +49,25 @@ guarantee, demonstrated.
    `service_role` key. The service role key bypasses every security rule —
    treat it like a password, and never put it in the tablet app.
 
-Then set the database settings the cron jobs read, in the SQL editor:
+Then give the nightly cron job its URL and key, in the SQL editor. They go in
+Vault rather than database settings: hosted Supabase does not grant the
+superuser rights that `alter database ... set` needs, and fails with
+`42501: permission denied to set parameter`.
 
 ```sql
-alter database postgres set app.settings.project_url = 'https://<ref>.supabase.co';
-alter database postgres set app.settings.service_role_key = '<service-role-key>';
+select vault.create_secret('https://<ref>.supabase.co', 'project_url');
+select vault.create_secret('<service-role-key>', 'service_role_key');
 
 update shop_settings set owner_email = 'you@example.com';
+```
+
+Rotating the key later means updating the secret, not editing the job:
+
+```sql
+select vault.update_secret(
+  (select id from vault.secrets where name = 'service_role_key'),
+  '<new-service-role-key>'
+);
 ```
 
 ---
