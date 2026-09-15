@@ -20,6 +20,6 @@ insert into services (id, name, price, active) values
   ('aaaaaaaa-0000-0000-0000-000000000006', 'Line Up', 20.00, true);
 
 update shop_settings set
-  owner_email = 'owner@example.com',
-  owner_whatsapp = '+441234567890'
+  owner_email = 'bernard@bernardeshun.co.uk',
+  owner_whatsapp = '+447425747522'
 where id;
