@@ -89,6 +89,14 @@ fills with HIGH flags for money that did in fact arrive.
 
 `tests/cash-only.test.ts` covers the switch in both positions.
 
+## Reading the records
+
+The daily email covers one day. `docs/reports.md` has the queries for a month,
+a quarter or the year — revenue by month, by day, by service, cash variance
+over time, and what the nightly job concluded — all runnable in the Supabase
+SQL editor with no terminal. It also has the measured storage figures: a full
+year of trading at 30 sales a day is 3.3 MB against a 500 MB free plan.
+
 ## Testing it without a dev environment
 
 `docs/testing.md` is a runbook for verifying the whole system with nothing but
