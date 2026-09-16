@@ -1,4 +1,11 @@
-import { db, getMeta, pendingCashCounts, pendingTransactions, setMeta } from "./db";
+import {
+  db,
+  getMeta,
+  pendingCashCounts,
+  pendingTransactions,
+  pruneSyncedHistory,
+  setMeta
+} from "./db";
 import { DEMO_MODE, supabase } from "./supabase";
 import { getDeviceId } from "./device";
 import type { Barber, Service, ShopSettings } from "../types";
@@ -65,6 +72,9 @@ async function runSync(): Promise<SyncResult> {
     const pushed = await pushQueue();
     const refreshed = await pullReferenceData();
     await reportHeartbeat();
+    // Only once the push has succeeded: anything dropped here is already on
+    // the server.
+    await pruneSyncedHistory();
     await setMeta(LAST_SYNC_KEY, new Date().toISOString());
     consecutiveFailures = 0;
     return { pushed: pushed.pushed, failed: pushed.failed, refreshed };

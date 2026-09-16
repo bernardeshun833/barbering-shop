@@ -3,6 +3,11 @@
 The daily email tells you about one day. This is how to ask about a month, a
 quarter, or the whole year.
 
+For month-by-month takings you no longer need any of this — the **History**
+tab in the app does it, behind the owner's PIN (`docs/history.md`). What
+follows is for everything that screen does not answer: revenue by service,
+cash variance over time, CSV exports, arbitrary date ranges.
+
 Everything here runs in the Supabase dashboard: **SQL Editor → new query →
 Run**. Nothing needs a terminal. Each query has an **Export** button above the
 results for CSV, and the **Save** button keeps it in the left-hand list so next

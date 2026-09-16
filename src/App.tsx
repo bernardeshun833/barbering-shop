@@ -8,6 +8,7 @@ import SyncStatusBar from "./components/SyncStatusBar";
 import { useSyncStatus } from "./hooks/useSyncStatus";
 import CashCount from "./pages/CashCount";
 import TodayLog from "./pages/TodayLog";
+import History from "./pages/History";
 import TransactionEntry from "./pages/TransactionEntry";
 import { db } from "./lib/db";
 import { sync } from "./lib/sync";
@@ -17,7 +18,8 @@ import { DEMO_PINS, resetDemo, seedDemoData } from "./lib/demo";
 const TABS = [
   { to: "/", label: "New sale" },
   { to: "/today", label: "Today" },
-  { to: "/cash-count", label: "Cash count" }
+  { to: "/cash-count", label: "Cash count" },
+  { to: "/history", label: "History" }
 ];
 
 /**
@@ -74,6 +76,10 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
   const [unlocked, setUnlocked] = useState(false);
+  // The owner's PIN, held in memory only and only while the app is open.
+  // Written nowhere: a PIN cached on the tablet is a PIN available to whoever
+  // is holding the tablet, which is the one thing this is meant to prevent.
+  const [ownerPin, setOwnerPin] = useState<string | null>(null);
 
   // No default value on purpose: `undefined` means IndexedDB has not
   // answered yet, and an empty array means it has and the shop has no
@@ -192,7 +198,10 @@ export default function App() {
           <button
             type="button"
             className="min-h-touch px-3 text-sm font-medium text-cream/45"
-            onClick={() => setUnlocked(false)}
+            onClick={() => {
+              setUnlocked(false);
+              setOwnerPin(null);
+            }}
           >
             Lock
           </button>
@@ -208,6 +217,10 @@ export default function App() {
           <Route path="/" element={<TransactionEntry />} />
           <Route path="/today" element={<TodayLog />} />
           <Route path="/cash-count" element={<CashCount />} />
+          <Route
+            path="/history"
+            element={<History pin={ownerPin} onUnlock={setOwnerPin} />}
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

@@ -91,6 +91,13 @@ fills with HIGH flags for money that did in fact arrive.
 
 ## Reading the records
 
+The **History** tab shows previous months in the app, behind the owner's own
+PIN — not the shift PIN. `docs/history.md` covers turning it on and, more to
+the point, what makes the lock real rather than cosmetic: the PIN is verified
+in the database (migration 0009), the device's read of `transactions` is
+narrowed to two days, and the tablet prunes its local copy so devtools cannot
+read the record out of IndexedDB.
+
 The daily email covers one day. `docs/reports.md` has the queries for a month,
 a quarter or the year — revenue by month, by day, by service, cash variance
 over time, and what the nightly job concluded — all runnable in the Supabase
