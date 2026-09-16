@@ -10,7 +10,6 @@ import CashCount from "./pages/CashCount";
 import TodayLog from "./pages/TodayLog";
 import TransactionEntry from "./pages/TransactionEntry";
 import { db } from "./lib/db";
-import type { Barber } from "./types";
 import { DEMO_MODE, supabase } from "./lib/supabase";
 import { DEMO_PINS, resetDemo, seedDemoData } from "./lib/demo";
 
@@ -75,8 +74,13 @@ export default function App() {
   const [setupError, setSetupError] = useState<string | null>(null);
   const [unlocked, setUnlocked] = useState(false);
 
-  const barbers = useLiveQuery(() => db.barbers.toArray(), [], [] as Barber[]);
-  const soleBarber = barbers.length === 1 ? barbers[0] : null;
+  // No default value on purpose: `undefined` means IndexedDB has not
+  // answered yet, and an empty array means it has and the shop has no
+  // barbers. Treating the first as the second flashes the till on screen
+  // for a moment before the lock screen replaces it, which reads as the
+  // app letting you in and then changing its mind.
+  const barbers = useLiveQuery(() => db.barbers.toArray(), []);
+  const soleBarber = barbers?.length === 1 ? barbers[0] : null;
 
   useEffect(() => {
     void (async () => {
@@ -112,7 +116,7 @@ export default function App() {
     })();
   }, []);
 
-  if (!ready) {
+  if (!ready || !barbers) {
     return (
       <div className="flex h-full items-center justify-center text-cream/55">Loading…</div>
     );

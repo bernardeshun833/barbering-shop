@@ -18,8 +18,14 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string; digital: boolean }
 ];
 
 export default function TransactionEntry() {
-  const barbers = useLiveQuery(() => db.barbers.toArray(), [], [] as Barber[]);
-  const services = useLiveQuery(() => db.services.toArray(), [], [] as Service[]);
+  // `undefined` until IndexedDB answers, which is what separates "still
+  // loading" from "this tablet has never synced" — two states that look
+  // identical on screen and need opposite things said about them.
+  const cachedBarbers = useLiveQuery(() => db.barbers.toArray(), []);
+  const cachedServices = useLiveQuery(() => db.services.toArray(), []);
+  const loading = cachedBarbers === undefined || cachedServices === undefined;
+  const barbers = cachedBarbers ?? [];
+  const services = cachedServices ?? [];
   const settings = useLiveQuery(() => db.settings.get("current"), []);
 
   // Cash only until MoMo is switched on. The digital tiles are hidden rather
@@ -172,6 +178,13 @@ export default function TransactionEntry() {
         }}
       />
 
+      {!loading && step === "barber" && barbers.length === 0 && (
+        <NotSynced what="barbers" />
+      )}
+      {!loading && step === "service" && services.length === 0 && (
+        <NotSynced what="services" />
+      )}
+
       {step === "barber" && (
         <Grid>
           {barbers.map((b) => (
@@ -249,6 +262,23 @@ export default function TransactionEntry() {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * What a tablet that has never completed a sync used to show here: an empty
+ * grid, nothing to tap, and no hint that anything was wrong — the most likely
+ * failure on the first day, presented as if the shop simply had no barbers.
+ */
+function NotSynced({ what }: { what: string }) {
+  return (
+    <div className="rounded-2xl border border-gold-600/25 bg-ink-800/60 p-5 text-center">
+      <p className="font-medium text-gold-200">No {what} saved on this tablet yet</p>
+      <p className="mt-2 text-sm text-cream/55">
+        Connect to the internet and give it a moment. The list is pulled down on
+        the first sync and then kept for working offline.
+      </p>
     </div>
   );
 }

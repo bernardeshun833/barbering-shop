@@ -17,6 +17,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      // Registered by hand in src/main.tsx, which also polls for new
+      // builds and reloads when one takes over. Two registrations of the
+      // same worker would race.
+      injectRegister: null,
       includeAssets: ["favicon.svg"],
       manifest: {
         // Must match the base, or the installed PWA opens outside its own
@@ -40,7 +44,14 @@ export default defineConfig({
         // App shell only — transaction data flows through IndexedDB + the
         // sync engine (src/lib/sync.ts), never through the SW cache.
         globPatterns: ["**/*.{js,css,html,svg,png,ico}"],
-        navigateFallback: `${base}index.html`
+        navigateFallback: `${base}index.html`,
+        // A new build must replace the old one without being asked
+        // twice: the tablet is not somewhere anyone will think to hard
+        // refresh, and a stale app that still logs sales is worse than
+        // one that visibly fails.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true
       }
     })
   ],

@@ -31,9 +31,13 @@ npm run dev
 ```
 
 Open it, unlock with Effe's PIN (`1212` in the seed data), log a sale, then
-open devtools → Network → **Offline** and log a few more. The top bar counts
-what is waiting. Go back online and watch it drain. That is the offline
-guarantee, demonstrated.
+open devtools → Network → **Offline** and log a few more. A bar appears at the
+top counting the sales this device is still holding. Go back online and watch
+it clear itself. That is the offline guarantee, demonstrated.
+
+That bar is the only status the app shows, and it is there only while sales
+are waiting. Being offline with an empty queue is not a problem — nothing is
+at risk — so the app says nothing about it.
 
 ---
 
@@ -44,7 +48,10 @@ guarantee, demonstrated.
 2. In the dashboard, open **SQL Editor**. Open each file in
    `supabase/migrations/` in order — `0001` through `0007` — and paste and run
    them one at a time. This replaces `supabase db push`.
-3. Optionally paste `supabase/seed.sql` for demo barbers and services.
+3. Paste `supabase/seed.sql` for Effe and the service list. It is safe to run
+   again at any time: it upserts Effe, retires any other barber, and refreshes
+   the services. Run it again if the shop ever ends up with more barbers than
+   it has — the tablet only shows the PIN unlock when there is exactly one.
 4. **Project Settings → API** gives you the project URL, the `anon` key and the
    `service_role` key. The service role key bypasses every security rule —
    treat it like a password, and never put it in the tablet app.

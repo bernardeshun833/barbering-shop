@@ -153,8 +153,16 @@ Then set the owner's contact details and any threshold you want to tune:
 update shop_settings set owner_email = '...', owner_whatsapp = '+44...';
 ```
 
+`supabase/seed.sql` sets up Ohemaa Effe and the service list, and is safe to
+run repeatedly: it upserts her, retires every other barber, and refreshes the
+services. Retires rather than deletes — `transactions.barber_id` points at
+those rows and that table is append-only.
+
 Add real barbers with `npm run hash-pin -- 4821`, which prints the
-`pin_hash`/`pin_salt`/`pin_iterations` to insert. Never store a raw PIN.
+`pin_hash`/`pin_salt`/`pin_iterations` to insert. Never store a raw PIN. Note
+that a second active barber changes the tablet's behaviour: the start-of-shift
+PIN unlock becomes a PIN on every sale, because that is the point at which
+"who did this cut?" is a question worth asking.
 
 ### Tablet setup
 
