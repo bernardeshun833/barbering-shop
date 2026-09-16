@@ -58,7 +58,7 @@ describe("datesNeedingRevision", () => {
     expect(datesNeedingRevision(reports, transactions)).toEqual(["2026-03-11"]);
   });
 
-  it("does not flag a day where only some rows were late", () => {
+  it("flags a day where only some of its rows were late", () => {
     // One late row is enough — the day still has to be recalculated.
     const transactions = [
       { created_at_local: "2026-03-11T09:00:00.000Z", synced_at: "2026-03-11T09:01:00.000Z" },
