@@ -155,6 +155,22 @@ async function pushQueue(): Promise<{ pushed: number; failed: number }> {
   return { pushed, failed };
 }
 
+/**
+ * Shape a shop_settings row for the local copy.
+ *
+ * `shop_settings.id` is a boolean in Postgres — `true`, the check constraint
+ * in migration 0003 that enforces exactly one row. IndexedDB keys cannot be
+ * booleans, so the local copy is keyed on the string "current" instead, and
+ * the row's own id must not be allowed to win: spread first, key last.
+ *
+ * Getting that order wrong is not a settings bug. The write shares a Dexie
+ * transaction with the barber and service lists, so a rejected key rolls all
+ * three back and the tablet comes up with nothing to sell.
+ */
+export function localSettingsRow(row: ShopSettings): ShopSettings & { id: string } {
+  return { ...row, id: "current" };
+}
+
 async function pullReferenceData(): Promise<boolean> {
   const [barbers, services, settings] = await Promise.all([
     supabase.from("barbers").select("*").eq("active", true),
@@ -172,7 +188,7 @@ async function pullReferenceData(): Promise<boolean> {
     await db.barbers.bulkPut(barbers.data as Barber[]);
     await db.services.clear();
     await db.services.bulkPut(services.data as Service[]);
-    await db.settings.put({ id: "current", ...(settings.data as ShopSettings) });
+    await db.settings.put(localSettingsRow(settings.data as ShopSettings));
   });
 
   return true;

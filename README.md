@@ -113,7 +113,7 @@ npm run dev
 ```
 
 ```bash
-npm test        # reconciliation logic — 31 tests, no backend needed
+npm test        # reconciliation logic and sync shaping — 60 tests, no backend needed
 npm run lint    # typecheck
 npm run build   # production PWA bundle + service worker
 ```

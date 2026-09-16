@@ -16,7 +16,7 @@ npm install
 npm test
 ```
 
-57 tests. They cover the reconciliation maths, the cash-only switch, the daily
+60 tests. They cover the reconciliation maths, the cash-only switch, the daily
 email, and the late-sync fix — all without a backend, because that logic is
 written as pure functions on purpose.
 
