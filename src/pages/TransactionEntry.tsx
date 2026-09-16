@@ -276,8 +276,9 @@ function NotSynced({ what }: { what: string }) {
     <div className="rounded-2xl border border-gold-600/25 bg-ink-800/60 p-5 text-center">
       <p className="font-medium text-gold-200">No {what} saved on this tablet yet</p>
       <p className="mt-2 text-sm text-cream/55">
-        Connect to the internet and give it a moment. The list is pulled down on
-        the first sync and then kept for working offline.
+        {navigator.onLine
+          ? "This tablet is online but has not managed to load the shop's list yet — the message above says why."
+          : "Connect to the internet and give it a moment. The list is pulled down on the first sync and then kept for working offline."}
       </p>
     </div>
   );

@@ -10,6 +10,7 @@ import CashCount from "./pages/CashCount";
 import TodayLog from "./pages/TodayLog";
 import TransactionEntry from "./pages/TransactionEntry";
 import { db } from "./lib/db";
+import { sync } from "./lib/sync";
 import { DEMO_MODE, supabase } from "./lib/supabase";
 import { DEMO_PINS, resetDemo, seedDemoData } from "./lib/demo";
 
@@ -93,25 +94,49 @@ export default function App() {
       // Sign-in is best effort. A tablet that cannot reach Supabase must still
       // reach the sale screen — that is the entire point of offline-first, and
       // a failed auth call is exactly what happens when the network is down.
+      // What it must not do is fail quietly: every RLS policy grants to the
+      // signed-in device, so a tablet that is signed out reads an empty
+      // barber list rather than an error, and looks like a shop with no staff.
+      let reason: string | null = null;
       try {
         const { data } = await supabase.auth.getSession();
         if (!data.session) {
           const email = import.meta.env.VITE_DEVICE_EMAIL;
           const password = import.meta.env.VITE_DEVICE_PASSWORD;
-          if (email && password) {
-            await supabase.auth.signInWithPassword({ email, password });
+          if (!email || !password) {
+            reason =
+              "This build has no device account in it. Set VITE_DEVICE_EMAIL and VITE_DEVICE_PASSWORD where the app is built, and deploy again.";
+          } else {
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+              reason = `Could not sign in as the shop device: ${error.message}`;
+            }
           }
         }
-      } catch {
-        // Falls through to the cached barber list below.
+      } catch (error) {
+        reason = `Could not reach the shop database: ${
+          error instanceof Error ? error.message : String(error)
+        }`;
       }
 
-      const cachedBarbers = await db.barbers.count();
-      if (cachedBarbers === 0 && !navigator.onLine) {
-        setSetupError(
-          "This tablet has no barber list saved yet. Connect to the internet once to finish setup."
-        );
+      if ((await db.barbers.count()) === 0) {
+        if (!navigator.onLine) {
+          reason =
+            "This tablet has no barber list saved yet. Connect to the internet once to finish setup.";
+        } else if (!reason) {
+          // Signed in and online, so ask for the lists now rather than waiting
+          // out the sync interval in front of someone who is trying to work.
+          const result = await sync();
+          if (result.error) {
+            reason = `Could not load the shop lists: ${result.error}`;
+          } else if ((await db.barbers.count()) === 0) {
+            reason =
+              "Signed in, but the shop database returned no barbers. Check that the barbers table has an active row, and that this app points at the right Supabase project.";
+          }
+        }
       }
+
+      setSetupError(reason);
       setReady(true);
     })();
   }, []);

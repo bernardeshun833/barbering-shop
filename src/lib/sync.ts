@@ -51,6 +51,17 @@ async function runSync(): Promise<SyncResult> {
   }
 
   try {
+    // Every policy in 0004 grants to `authenticated` — the one Supabase
+    // account that represents this tablet. Signed out, the reads do not fail,
+    // they come back empty, which looks exactly like a shop with no barbers.
+    // Say which it is instead.
+    const { data: auth } = await supabase.auth.getSession();
+    if (!auth.session) {
+      throw new Error(
+        "not signed in as the shop device — check VITE_DEVICE_EMAIL and VITE_DEVICE_PASSWORD"
+      );
+    }
+
     const pushed = await pushQueue();
     const refreshed = await pullReferenceData();
     await reportHeartbeat();
@@ -151,7 +162,10 @@ async function pullReferenceData(): Promise<boolean> {
     supabase.from("shop_settings").select("*").single()
   ]);
 
-  if (barbers.error || services.error || settings.error) return false;
+  // Thrown, not swallowed. A silent false here is how a tablet ends up sitting
+  // on an empty barber list with nothing on screen to say why.
+  const failure = barbers.error ?? services.error ?? settings.error;
+  if (failure) throw new Error(failure.message);
 
   await db.transaction("rw", db.barbers, db.services, db.settings, async () => {
     await db.barbers.clear();
