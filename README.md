@@ -140,7 +140,7 @@ the checks can be developed and tested without a backend at all.
 
 ```bash
 supabase link --project-ref <ref>
-supabase db push                              # migrations 0001–0007
+supabase db push                              # migrations 0001–0009
 supabase db execute --file supabase/seed.sql  # dev/demo data only
 
 # MoMo secrets are not needed while the shop is cash-only — see above.

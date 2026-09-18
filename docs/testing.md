@@ -46,7 +46,7 @@ at risk — so the app says nothing about it.
 1. Sign up at supabase.com and create a free project. Note the **project ref**
    (the code in your project URL).
 2. In the dashboard, open **SQL Editor**. Open each file in
-   `supabase/migrations/` in order — `0001` through `0007` — and paste and run
+   `supabase/migrations/` in order — `0001` through `0009` — and paste and run
    them one at a time. This replaces `supabase db push`.
 3. Paste `supabase/seed.sql` for Effe and the service list. It is safe to run
    again at any time: it upserts Effe, retires any other barber, and refreshes

@@ -21,6 +21,35 @@ Postgres and dropping the trigger. That is Supabase's dashboard owner — the
 shop owner. If that key leaks, the guarantee is gone, and no amount of
 application code changes that.
 
+## The tablet's own login ships to the browser
+
+`VITE_DEVICE_EMAIL` and `VITE_DEVICE_PASSWORD` are compiled into the bundle —
+that is what `VITE_` means, and there is no version of a build-time variable
+that is not. So the shop device's Supabase account is readable by anyone who
+opens the site and views source, and anyone who does can obtain an
+`authenticated` session.
+
+Measured against the policies in 0004, that session can:
+
+- read `barbers`, PIN hashes included, which turns "someone holding the
+  tablet can brute-force a 4-digit PIN" into "anyone on the internet can";
+- **insert transactions and cash counts** — fabricated sales in the shop's
+  own books, which the append-only rule then makes impossible to delete;
+- read the last two days of transactions.
+
+It cannot read the history, the owner's PIN, MoMo data or reconciliation
+reports — that is what migration 0009 closed.
+
+The fabricated-sale path is the one that matters: it corrupts the daily
+report, the cash expectation and the rolling medians that the volume checks
+learn "normal" from, and it does so in a table designed never to forget.
+
+The fix is to stop shipping the credential: provision the tablet once by hand
+— sign in on the device, let Supabase persist and refresh the session — and
+ship no password at all. Until that is done, the practical protection is that
+the URL is not advertised, which is not a security control and should not be
+mistaken for one.
+
 ## PIN verification is attribution, not security
 
 Barbers' PIN hashes sync down to the tablet, because PIN entry has to work
