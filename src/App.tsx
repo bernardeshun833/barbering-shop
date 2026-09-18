@@ -3,6 +3,7 @@ import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import Backdrop from "./components/Backdrop";
 import Brand from "./components/Brand";
+import DeviceSetup from "./components/DeviceSetup";
 import LockScreen from "./components/LockScreen";
 import SyncStatusBar from "./components/SyncStatusBar";
 import { useSyncStatus } from "./hooks/useSyncStatus";
@@ -11,8 +12,9 @@ import TodayLog from "./pages/TodayLog";
 import History from "./pages/History";
 import TransactionEntry from "./pages/TransactionEntry";
 import { db } from "./lib/db";
+import { hasSession, legacyBuildCredentials, signInDevice } from "./lib/auth";
 import { sync } from "./lib/sync";
-import { DEMO_MODE, supabase } from "./lib/supabase";
+import { DEMO_MODE } from "./lib/supabase";
 import { DEMO_PINS, resetDemo, seedDemoData } from "./lib/demo";
 
 const TABS = [
@@ -80,6 +82,12 @@ export default function App() {
   // Written nowhere: a PIN cached on the tablet is a PIN available to whoever
   // is holding the tablet, which is the one thing this is meant to prevent.
   const [ownerPin, setOwnerPin] = useState<string | null>(null);
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [setupDone, setSetupDone] = useState(false);
+  // True when this deploy still carries VITE_DEVICE_PASSWORD. Worth saying out
+  // loud rather than silently tolerating: that value is in the JavaScript any
+  // customer can read.
+  const [shippedCredential, setShippedCredential] = useState(false);
 
   // No default value on purpose: `undefined` means IndexedDB has not
   // answered yet, and an empty array means it has and the shop has no
@@ -97,32 +105,28 @@ export default function App() {
         return;
       }
 
-      // Sign-in is best effort. A tablet that cannot reach Supabase must still
-      // reach the sale screen — that is the entire point of offline-first, and
-      // a failed auth call is exactly what happens when the network is down.
-      // What it must not do is fail quietly: every RLS policy grants to the
-      // signed-in device, so a tablet that is signed out reads an empty
-      // barber list rather than an error, and looks like a shop with no staff.
+      // Every RLS policy grants to the signed-in device, so a tablet that is
+      // signed out reads an empty barber list rather than an error and looks
+      // like a shop with no staff. The session comes from provisioning this
+      // device once (DeviceSetup) — never from the build, because a VITE_
+      // variable is public by definition.
       let reason: string | null = null;
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (!data.session) {
-          const email = import.meta.env.VITE_DEVICE_EMAIL;
-          const password = import.meta.env.VITE_DEVICE_PASSWORD;
-          if (!email || !password) {
-            reason =
-              "This build has no device account in it. Set VITE_DEVICE_EMAIL and VITE_DEVICE_PASSWORD where the app is built, and deploy again.";
-          } else {
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) {
-              reason = `Could not sign in as the shop device: ${error.message}`;
-            }
-          }
+      const legacy = legacyBuildCredentials();
+      setShippedCredential(Boolean(legacy));
+
+      if (!(await hasSession())) {
+        if (legacy) {
+          // An older deploy that still carries the credential. Honoured so the
+          // shop keeps working, and called out in the banner below so it does
+          // not quietly stay that way.
+          const result = await signInDevice(legacy.email, legacy.password);
+          if (!result.ok) reason = `Could not sign in as the shop device: ${result.error}`;
+        } else {
+          // Blocking only when there is nothing cached to work from. A tablet
+          // that already has the lists can keep taking money while it waits to
+          // be signed in again.
+          setNeedsSetup(true);
         }
-      } catch (error) {
-        reason = `Could not reach the shop database: ${
-          error instanceof Error ? error.message : String(error)
-        }`;
       }
 
       if ((await db.barbers.count()) === 0) {
@@ -150,6 +154,21 @@ export default function App() {
   if (!ready || !barbers) {
     return (
       <div className="flex h-full items-center justify-center text-cream/55">Loading…</div>
+    );
+  }
+
+  if (!DEMO_MODE && needsSetup && !setupDone) {
+    return (
+      <div className="flex h-full flex-col">
+        <DeviceSetup
+          canSkip={(barbers?.length ?? 0) > 0}
+          onDone={() => {
+            setSetupDone(true);
+            setSetupError(null);
+            void sync();
+          }}
+        />
+      </div>
     );
   }
 
@@ -194,7 +213,7 @@ export default function App() {
           </NavLink>
         ))}
 
-        {soleBarber && (
+        {(soleBarber || ownerPin) && (
           <button
             type="button"
             className="min-h-touch px-3 text-sm font-medium text-cream/45"
@@ -207,6 +226,15 @@ export default function App() {
           </button>
         )}
       </nav>
+
+      {shippedCredential && (
+        <p className="bg-amber-900/60 px-4 py-3 text-sm text-amber-100">
+          <strong>This build still carries the device password.</strong> It is
+          readable by anyone who views the page source. Remove
+          VITE_DEVICE_EMAIL and VITE_DEVICE_PASSWORD where the app is built,
+          redeploy, and sign this tablet in once by hand.
+        </p>
+      )}
 
       {setupError && (
         <p className="bg-amber-900/60 px-4 py-3 text-amber-100">{setupError}</p>

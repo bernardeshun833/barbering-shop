@@ -115,9 +115,13 @@ deploy:
 ```
 VITE_SUPABASE_URL         https://<ref>.supabase.co
 VITE_SUPABASE_ANON_KEY    <anon key>
-VITE_DEVICE_EMAIL         device@yourshop.example
-VITE_DEVICE_PASSWORD      <the device account password>
 ```
+
+Two, not four. The device account's email and password are **not** build
+variables: you type them once into the tablet itself, on the "Set up this
+tablet" screen, and Supabase keeps the session from then on. Anything named
+`VITE_` ends up in the JavaScript, and a password there is a password every
+visitor has.
 
 Set one but not the other and you get the demo, not the real thing — check the
 banner is gone before trusting anything the app tells you.
@@ -165,8 +169,9 @@ aeroplane mode, log sales, turn it back on — the queue drains. That is the sam
 code that will run on the tablet.
 
 > The app signs in as the shop device. Create that account in the Supabase
-> dashboard (**Authentication → Users → Add user**), then add
-> `VITE_DEVICE_EMAIL` and `VITE_DEVICE_PASSWORD` as secrets and redeploy.
+> dashboard (**Authentication → Users → Add user**, ticking *Auto Confirm
+> User*), then open the deployed app on the tablet and enter it once on the
+> "Set up this tablet" screen. It is not a build secret and must not be one.
 
 ---
 

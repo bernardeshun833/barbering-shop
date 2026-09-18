@@ -21,12 +21,18 @@ Postgres and dropping the trigger. That is Supabase's dashboard owner — the
 shop owner. If that key leaks, the guarantee is gone, and no amount of
 application code changes that.
 
-## The tablet's own login ships to the browser
+## The tablet's login used to ship to the browser
+
+**Fixed.** The tablet is now provisioned by hand, once, on the device itself,
+and nothing is compiled into the bundle but the URL and the anon key. What
+follows is what the old arrangement allowed, kept because a build that still
+carries those variables still behaves this way — which is why the app says so
+in a banner on every screen until they are removed.
 
 `VITE_DEVICE_EMAIL` and `VITE_DEVICE_PASSWORD` are compiled into the bundle —
 that is what `VITE_` means, and there is no version of a build-time variable
-that is not. So the shop device's Supabase account is readable by anyone who
-opens the site and views source, and anyone who does can obtain an
+that is not. So the shop device's Supabase account was readable by anyone who
+opened the site and viewed source, and anyone who did could obtain an
 `authenticated` session.
 
 Measured against the policies in 0004, that session can:
@@ -44,11 +50,11 @@ The fabricated-sale path is the one that matters: it corrupts the daily
 report, the cash expectation and the rolling medians that the volume checks
 learn "normal" from, and it does so in a table designed never to forget.
 
-The fix is to stop shipping the credential: provision the tablet once by hand
-— sign in on the device, let Supabase persist and refresh the session — and
-ship no password at all. Until that is done, the practical protection is that
-the URL is not advertised, which is not a security control and should not be
-mistaken for one.
+The fix, now in place, is to stop shipping the credential: the tablet is signed
+in once by hand and Supabase persists and refreshes the session. A deploy that
+still sets those two variables keeps working, because breaking a live till to
+make a point would be its own failure — but it shows the warning until they
+are gone.
 
 ## PIN verification is attribution, not security
 

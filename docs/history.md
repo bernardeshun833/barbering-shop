@@ -82,3 +82,14 @@ tablet.
 
 For anything this screen does not answer — revenue by service, cash variance
 across a month, exports to CSV — `docs/reports.md` has the queries.
+
+## Provisioning the tablet
+
+The History tab, like every other screen that touches the database, needs the
+tablet signed in as the shop device. That is done once, on the device, through
+the **Set up this tablet** screen — not through a build variable. See the
+tablet setup section of the README for why.
+
+If the tablet is ever cleared or replaced, that screen is what comes back, and
+the owner enters the device account again. The owner's PIN is unaffected: it
+lives in the database and nothing about it is stored on the tablet.

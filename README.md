@@ -182,10 +182,19 @@ PIN unlock becomes a PIN on every sale, because that is the point at which
 ### Tablet setup
 
 Serve the built app over HTTPS and add it to the home screen — it installs as a
-standalone PWA. Provision the device once with `VITE_DEVICE_EMAIL` /
-`VITE_DEVICE_PASSWORD` (a single Supabase account representing the shop
-device), and let it sync once while online so the barber and service lists are
-cached. After that it works with no connection.
+standalone PWA. On first open it asks to be provisioned: enter the shop
+device's Supabase account (**Authentication → Users**) on the "Set up this
+tablet" screen. Supabase persists and refreshes that session, so it is asked
+once per tablet and never again unless the browser's site data is cleared.
+
+Those credentials are deliberately **not** build variables. A `VITE_` value is
+compiled into the bundle, and an authenticated session in the bundle is one
+anybody can take — enough to read the barbers' PIN hashes and to insert sales
+that never happened into a table that cannot forget them. See
+`docs/security.md`.
+
+Let it sync once while online so the barber and service lists are cached.
+After that it works with no connection.
 
 ## The nightly job
 
